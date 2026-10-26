@@ -26,7 +26,7 @@ function isPickerCancelled(error) {
  * create/write here: File.create() rejects SAF content:// URIs by design.
  * Resolves null when the user cancels the picker.
  */
-export async function saveBackupToUserFile(json, fileName) {
+export async function saveContentToUserFile(content, fileName, mimeType = 'application/octet-stream') {
   const safeName = String(fileName).replace(/[^A-Za-z0-9._-]/g, '-');
   let directory;
   try {
@@ -37,31 +37,47 @@ export async function saveBackupToUserFile(json, fileName) {
   }
   if (!directory) return null;
 
-  // Same backup twice a day would collide; SAF createFile does not overwrite.
+  // Same file twice a day would collide; SAF createFile does not overwrite.
   const existing = directory.list().find((entry) => entry.name === safeName);
   if (existing && !(existing instanceof Directory)) existing.delete();
 
-  const file = directory.createFile(safeName, 'application/json');
-  file.write(json);
+  const file = directory.createFile(safeName, mimeType);
+  file.write(content);
   return { name: file.name || safeName, size: file.size };
 }
 
-/** Write to cache, then open the platform save/share UI on the file. */
-export async function saveBackup(json, fileName) {
+export async function saveBackupToUserFile(json, fileName) {
+  return saveContentToUserFile(json, fileName, 'application/json');
+}
+
+/** Write to cache, then open the platform share UI on the file. */
+export async function shareContent(
+  content,
+  fileName,
+  { mimeType = 'application/octet-stream', uti, dialogTitle = 'Save your Budgetarian file' } = {},
+) {
   const safeName = String(fileName).replace(/[^A-Za-z0-9._-]/g, '-');
   const file = new File(Paths.cache, safeName);
   file.create({ overwrite: true });
-  file.write(json);
+  file.write(content);
   if (!(await Sharing.isAvailableAsync())) {
     file.delete();
     throw new Error('No share target is available on this device.');
   }
   await Sharing.shareAsync(file.uri, {
-    dialogTitle: 'Save your Budgetarian backup',
-    mimeType: 'application/json',
-    UTI: 'public.json',
+    dialogTitle,
+    mimeType,
+    ...(uti ? { UTI: uti } : {}),
   });
   return { name: safeName, size: file.size };
+}
+
+export async function saveBackup(json, fileName) {
+  return shareContent(json, fileName, {
+    dialogTitle: 'Save your Budgetarian backup',
+    mimeType: 'application/json',
+    uti: 'public.json',
+  });
 }
 
 /**

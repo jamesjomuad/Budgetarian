@@ -195,6 +195,10 @@ function NavigationShell() {
           }}
         />
         <Stack.Screen
+          name="budget/export"
+          options={{ title: "Export budget", headerBackTitle: "Back" }}
+        />
+        <Stack.Screen
           name="transaction/form"
           options={{
             presentation: "modal",

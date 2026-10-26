@@ -13,6 +13,14 @@ export async function saveBackupToUserFile() {
   throw new Error(UNSUPPORTED);
 }
 
+export async function saveContentToUserFile() {
+  throw new Error(UNSUPPORTED);
+}
+
+export async function shareContent() {
+  throw new Error(UNSUPPORTED);
+}
+
 export async function saveBackup() {
   throw new Error(UNSUPPORTED);
 }

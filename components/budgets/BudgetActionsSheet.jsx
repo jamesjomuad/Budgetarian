@@ -17,7 +17,6 @@ export function BudgetActionsSheet({ visible, budget, onDelete, onClose }) {
   const { colors, radius, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const isBusy = useBudgetTransferStore((state) => state.isBusy);
-  const exportBudget = useBudgetTransferStore((state) => state.exportBudget);
   const startImport = useBudgetTransferStore((state) => state.startImport);
 
   const run = (action) => {
@@ -70,18 +69,13 @@ export function BudgetActionsSheet({ visible, budget, onDelete, onClose }) {
 
           <View style={{ gap: spacing.xs, paddingHorizontal: spacing.lg }}>
             <ActionRow
-              icon="folder"
-              label="Export budget"
-              caption="Save this budget as a file"
-              disabled={isBusy}
-              onPress={() => run(() => exportBudget(budget.id, 'save'))}
-            />
-            <ActionRow
               icon="share"
-              label="Share budget"
-              caption="Send this budget file to another app"
+              label="Export budget"
+              caption="Backup, spreadsheet or PDF of this budget"
               disabled={isBusy}
-              onPress={() => run(() => exportBudget(budget.id, 'share'))}
+              onPress={() =>
+                run(() => router.push({ pathname: '/budget/export', params: { id: budget.id } }))
+              }
             />
             <ActionRow
               icon="archive"

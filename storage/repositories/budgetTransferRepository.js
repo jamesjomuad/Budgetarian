@@ -47,9 +47,19 @@ export async function readBudgetTransferSource(store, budgetId) {
   };
 }
 
+/**
+ * Export source with the folder name resolved for display. The folder is an
+ * organisational label only; it is never written into an exported file.
+ */
+export async function readBudgetExportSource(store, budgetId) {
+  const source = await readBudgetTransferSource(store, budgetId);
+  if (!source) return null;
+  const folder = source.budget.folder_id ? await store.getFolder(source.budget.folder_id) : null;
+  return { ...source, folderName: folder?.name ?? null };
+}
+
 /** Existing names/tags the import planner needs; the repository never guesses. */
-export async function readBudgetImportContext(store) {
-  const [tags, budgets] = await Promise.all([
+export async function readBudgetImportContext(store) {  const [tags, budgets] = await Promise.all([
     store.listTags({ includeArchived: true }),
     store.listBudgets({ includeArchived: true }),
   ]);
