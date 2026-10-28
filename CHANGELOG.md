@@ -8,12 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Single-budget export and import. A budget's options menu can save or share
-  just that budget as a versioned JSON file, and can import one back without
-  touching any other budget. The same import is available from Settings →
-  Backup, alongside full-backup import. A preview lists the budget, its
-  transactions, breakdown items, tags, reminders and receipts before anything
-  is written, and the destination folder can be chosen there. Imports always
+- Single-budget export center. A budget's options menu now opens an export
+  screen offering five formats for that budget alone: a restorable Budgetarian
+  JSON backup, an Excel workbook, a CSV of its transactions, an invoice PDF and
+  a financial report PDF. Every format previews its exact contents before
+  anything is written - the JSON preview lists record counts and receipt size,
+  the spreadsheet previews show each sheet or row table, and the invoice and
+  report previews render the real paginated pages. Save or Share happens from
+  the preview, so the file always matches what was reviewed; if the budget
+  changes while a preview is open, exporting is blocked until the refreshed
+  preview is reviewed again. Invoice numbers, dates, client details, lines,
+  quantities, discount, tax, notes and payment terms are configurable, and an
+  invoice never records income or changes a transaction. Reports respect a
+  chosen date range and optional details/summary sections, exclude transfers
+  and archived budgets, and their totals follow the app's own calculations.
+  Spreadsheets and CSV write amounts as real numbers and neutralise text that
+  looks like a formula.
+- Single-budget import. A budget's options menu and Settings → Backup can both
+  import one budget file without touching any other budget. A preview lists the
+  budget, its format version, record counts and receipt size before anything is
+  written, and the destination folder can be chosen there. Imports always
   create a new active budget with fresh IDs; duplicate names get an
   "(Imported)" suffix, existing tags are reused by name, and receipts travel
   inside the file and are copied back into app storage. Transfers and account

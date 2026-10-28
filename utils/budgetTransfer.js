@@ -658,6 +658,7 @@ export function validateBudgetTransfer(parsed) {
     ok: true,
     issues: [],
     warnings,
+    formatVersion: version,
     createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : null,
     appVersion: isObject(parsed.app) ? text(parsed.app.version) || null : null,
     data: {
@@ -681,6 +682,7 @@ export function validateBudgetTransfer(parsed) {
       reminders: reminders.length,
       activeReminders: reminders.filter((row) => row.enabled && row.status === 'active').length,
       attachments: attachments.length,
+      attachmentBytes: totalAttachmentBytes,
     },
   };
 }

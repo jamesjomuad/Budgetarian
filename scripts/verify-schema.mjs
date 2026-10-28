@@ -74,9 +74,31 @@ import {
 } from '../utils/budgetTransfer.js';
 import {
   applyBudgetTransferImport,
+  readBudgetExportSource,
   readBudgetImportContext,
   readBudgetTransferSource,
 } from '../storage/repositories/budgetTransferRepository.js';
+import {
+  buildBudgetSnapshot,
+  buildCsvModel,
+  buildExportFileName,
+  buildInvoiceLineSources,
+  buildInvoiceModel,
+  buildReportModel,
+  buildWorkbookModel,
+  computeInvoiceTotals,
+  createInvoiceConfig,
+  createReportConfig,
+  documentAmount,
+  filterTransactionsByRange,
+  guardSpreadsheetText,
+  plainAmount,
+  reconcileInvoiceConfig,
+  validateInvoiceConfig,
+  validateReportConfig,
+} from '../utils/budgetExport.js';
+import { buildPdfBytes, measureText, wrapText } from '../utils/pdf.js';
+import { buildXlsxBytes } from '../utils/xlsx.js';
 
 let passed = 0;
 let failed = 0;
@@ -4183,6 +4205,419 @@ check(
     tags: importContext.existingTags.map((tag) => `${tag.name}:${tag.archived}`),
     budgets: importContext.existingBudgetNames,
   }),
+);
+
+console.log('\n--- single-budget export center ---');
+
+/** Read a store-only ZIP written by utils/xlsx.js, without a zip library. */
+function readStoredZip(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const entries = new Map();
+  let offset = 0;
+  while (offset + 30 <= bytes.length && view.getUint32(offset, true) === 0x04034b50) {
+    const size = view.getUint32(offset + 18, true);
+    const nameLength = view.getUint16(offset + 26, true);
+    const extraLength = view.getUint16(offset + 28, true);
+    const name = Buffer.from(bytes.subarray(offset + 30, offset + 30 + nameLength)).toString('utf8');
+    const start = offset + 30 + nameLength + extraLength;
+    entries.set(name, bytes.subarray(start, start + size));
+    offset = start + size;
+  }
+  return entries;
+}
+
+const EXPORT_FOLDER = 'folder_export_trips';
+const exportMemory = createMemoryAdapter();
+const exportIds = await createTransferFixture(exportMemory);
+await exportMemory.insertFolder({
+  id: EXPORT_FOLDER,
+  name: 'Trips',
+  color: null,
+  position: 0,
+  created_at: TRANSFER_STAMP,
+  updated_at: TRANSFER_STAMP,
+});
+const exportBudgetRow = await exportMemory.getBudget(exportIds.sourceBudget);
+await exportMemory.updateBudget({ ...exportBudgetRow, folder_id: EXPORT_FOLDER });
+
+const exportSource = await readBudgetExportSource(exportMemory, exportIds.sourceBudget);
+check(
+  'an export source resolves the budget and its folder',
+  exportSource !== null &&
+    exportSource.budget.id === exportIds.sourceBudget &&
+    exportSource.folderName === 'Trips',
+  JSON.stringify({ folder: exportSource?.folderName }),
+);
+
+const sourceBefore = JSON.stringify(exportSource);
+const exportSnapshot = buildBudgetSnapshot(exportSource, {
+  currency: 'PHP',
+  generatedAt: TRANSFER_STAMP,
+});
+check(
+  'the export snapshot scopes to the opened budget only',
+  exportSnapshot.transactions.length === 2 &&
+    exportSnapshot.transactions.every((row) => row.budget_id === exportIds.sourceBudget) &&
+    !exportSnapshot.transactions.some((row) => row.id === exportIds.otherExpense) &&
+    exportSnapshot.tags.length === 1 &&
+    exportSnapshot.reminders.length === 1 &&
+    exportSnapshot.attachments.length === 1,
+  JSON.stringify(exportSnapshot.counts),
+);
+check(
+  'preparing an export never modifies the stored rows',
+  JSON.stringify(exportSource) === sourceBefore,
+);
+check(
+  'the snapshot totals follow the app financial rules',
+  exportSnapshot.totals.income === 20000 &&
+    exportSnapshot.totals.expectedIncome === 0 &&
+    exportSnapshot.totals.expense === 5000 &&
+    exportSnapshot.totals.remaining === 15000 &&
+    exportSnapshot.payment.unpaidExpense === 5000,
+  JSON.stringify(exportSnapshot.totals),
+);
+check(
+  'the snapshot fingerprints are stable across identical reads',
+  exportSnapshot.fingerprint ===
+    buildBudgetSnapshot(exportSource, { currency: 'PHP', generatedAt: TRANSFER_STAMP }).fingerprint,
+);
+const driftedSnapshot = buildBudgetSnapshot(
+  {
+    ...exportSource,
+    transactions: exportSource.transactions.map((row) =>
+      row.id === exportIds.expense ? { ...row, amount: 6000 } : row,
+    ),
+  },
+  { currency: 'PHP', generatedAt: TRANSFER_STAMP },
+);
+check(
+  'a changed amount invalidates the preview fingerprint',
+  driftedSnapshot.fingerprint !== exportSnapshot.fingerprint,
+);
+
+// --- CSV --------------------------------------------------------------
+const csv = buildCsvModel(exportSnapshot);
+check(
+  'CSV has one header and one row per transaction',
+  csv.columns.length === 9 && csv.rows.length === 2 && csv.count === 2,
+  JSON.stringify({ columns: csv.columns.length, rows: csv.count }),
+);
+check('CSV begins with a UTF-8 BOM and uses CRLF', csv.text.charCodeAt(0) === 0xfeff && csv.text.includes('\r\n'));
+check(
+  'CSV writes formatted amounts as plain numbers',
+  csv.rows.some((row) => row[1] === 'Flights' && row[5] === '50.00' && row[6] === 'PHP'),
+  JSON.stringify(csv.rows[0]),
+);
+const trickySource = {
+  ...exportSource,
+  transactions: exportSource.transactions.map((row) =>
+    row.id === exportIds.expense
+      ? { ...row, description: 'A, "quoted"\nnote' }
+      : row,
+  ),
+};
+const trickyCsv = buildCsvModel(
+  buildBudgetSnapshot(trickySource, { currency: 'PHP', generatedAt: TRANSFER_STAMP }),
+);
+check(
+  'CSV escapes commas, quotes and newlines',
+  trickyCsv.text.includes('"A, ""quoted""\nnote"'),
+  trickyCsv.text.split('\r\n')[2],
+);
+const injectedSource = {
+  ...exportSource,
+  transactions: exportSource.transactions.map((row) =>
+    row.id === exportIds.expense ? { ...row, description: '=SUM(A1)' } : row,
+  ),
+};
+const injectedCsv = buildCsvModel(
+  buildBudgetSnapshot(injectedSource, { currency: 'PHP', generatedAt: TRANSFER_STAMP }),
+);
+check(
+  'CSV neutralises formula-like text',
+  injectedCsv.text.includes("'=SUM(A1)") && guardSpreadsheetText('@cmd') === "'@cmd",
+  injectedCsv.text.split('\r\n')[2],
+);
+
+// --- XLSX -------------------------------------------------------------
+const workbook = buildWorkbookModel(exportSnapshot);
+check(
+  'the workbook contains the five documented sheets',
+  workbook.sheets.map((sheet) => sheet.name).join('|') ===
+    'Budget Summary|Transactions|Breakdown Items|Tags|Reminders',
+  workbook.sheets.map((sheet) => sheet.name).join('|'),
+);
+check(
+  'workbook rows carry the same references and record counts as the preview',
+  workbook.sheets[1].count === 2 &&
+    workbook.sheets[2].count === 2 &&
+    workbook.sheets[1].rows[0][0].value === exportSnapshot.transactions[0].reference,
+);
+check(
+  'workbook amounts stay numeric instead of formatted text',
+  workbook.sheets[1].rows.every((row) => row[7].kind === 'money' && typeof row[7].value === 'number'),
+);
+const xlsxBytes = buildXlsxBytes(workbook);
+const xlsxZip = readStoredZip(xlsxBytes);
+const xlsxView = new DataView(xlsxBytes.buffer, xlsxBytes.byteOffset, xlsxBytes.byteLength);
+check(
+  'the XLSX file is a valid store-only ZIP with the required OOXML parts',
+  xlsxBytes[0] === 0x50 &&
+    xlsxBytes[1] === 0x4b &&
+    xlsxView.getUint32(xlsxBytes.length - 22, true) === 0x06054b50 &&
+    xlsxZip.has('[Content_Types].xml') &&
+    xlsxZip.has('xl/workbook.xml') &&
+    xlsxZip.has('xl/styles.xml') &&
+    xlsxZip.has('xl/worksheets/sheet1.xml') &&
+    xlsxZip.has('xl/worksheets/sheet5.xml'),
+  JSON.stringify([...xlsxZip.keys()]),
+);
+const transactionsXML = Buffer.from(xlsxZip.get('xl/worksheets/sheet2.xml')).toString('utf8');
+const summaryXML = Buffer.from(xlsxZip.get('xl/worksheets/sheet1.xml')).toString('utf8');
+check(
+  'the workbook writes text as inline strings and amounts as numbers',
+  transactionsXML.includes('inlineStr') &&
+    transactionsXML.includes('<v>200</v>') &&
+    transactionsXML.includes('<v>50</v>'),
+  transactionsXML.slice(0, 240),
+);
+const injectedWorkbook = buildWorkbookModel(
+  buildBudgetSnapshot(injectedSource, { currency: 'PHP', generatedAt: TRANSFER_STAMP }),
+);
+const injectedZip = readStoredZip(buildXlsxBytes(injectedWorkbook));
+const injectedSheet = Buffer.from(injectedZip.get('xl/worksheets/sheet2.xml')).toString('utf8');
+check(
+  'user text can never become an XLSX formula',
+  injectedSheet.includes('=SUM(A1)') && !injectedSheet.includes('<f>'),
+);
+check(
+  'the summary sheet keeps its money cells numeric in major units',
+  summaryXML.includes('<v>200</v>') &&
+    summaryXML.includes('<v>50</v>') &&
+    summaryXML.includes('t="inlineStr"') &&
+    !summaryXML.includes('<f>'),
+  summaryXML.slice(0, 200),
+);
+
+// --- Invoice PDF ------------------------------------------------------
+const invoiceConfig = {
+  number: 'INV 7/2026',
+  issueDate: '2026-10-01',
+  dueDate: '2026-10-15',
+  clientName: 'Acme Trading',
+  clientContact: 'hello@acme.test',
+  clientAddress: '1 Market Street',
+  title: 'October services',
+  notes: 'Thank you.',
+  terms: 'Due within 14 days.',
+  taxRate: '10',
+  discount: '50.00',
+  lineItems: [
+    {
+      id: 'line-1',
+      reference: 'TXN-0001',
+      date: '2026-10-05',
+      description: 'Flights',
+      quantity: '2',
+      unitPrice: '100.00',
+      selected: true,
+    },
+    {
+      id: 'line-2',
+      reference: 'TXN-0002',
+      date: '2026-10-06',
+      description: 'Not billed',
+      quantity: '1',
+      unitPrice: '999.00',
+      selected: false,
+    },
+  ],
+};
+const defaultInvoice = createInvoiceConfig(exportSnapshot);
+const defaultInvoiceValidation = validateInvoiceConfig(defaultInvoice, exportSnapshot);
+check(
+  'invoice lines are derived from expense breakdowns and start unselected',
+  buildInvoiceLineSources(exportSnapshot).length === 2 &&
+    buildInvoiceLineSources(exportSnapshot).every((line) => line.id.startsWith('item:')) &&
+    defaultInvoice.lineItems.every((line) => !line.selected),
+  JSON.stringify(defaultInvoice.lineItems.map((line) => line.id)),
+);
+check(
+  'an incomplete invoice blocks its preview with named issues',
+  defaultInvoiceValidation.ok === false &&
+    defaultInvoiceValidation.issues.some((issue) => /client/i.test(issue)) &&
+    defaultInvoiceValidation.issues.some((issue) => /at least one/i.test(issue)),
+  JSON.stringify(defaultInvoiceValidation.issues),
+);
+const invoiceTotals = computeInvoiceTotals(invoiceConfig, 'PHP');
+check(
+  'invoice totals apply the discount before tax',
+  invoiceTotals.lineCount === 1 &&
+    invoiceTotals.subtotal === 20000 &&
+    invoiceTotals.discount === 5000 &&
+    invoiceTotals.tax === 1500 &&
+    invoiceTotals.total === 16500,
+  JSON.stringify(invoiceTotals),
+);
+const invoiceModel = buildInvoiceModel(exportSnapshot, invoiceConfig);
+check(
+  'a complete invoice is valid and renders at least one page',
+  invoiceModel.validation.ok === true && invoiceModel.pages.length >= 1,
+  JSON.stringify(invoiceModel.validation.issues),
+);
+check(
+  'the invoice preview and export come from the same deterministic model',
+  JSON.stringify(buildInvoiceModel(exportSnapshot, invoiceConfig)) === JSON.stringify(invoiceModel),
+);
+const invoicePdf = buildPdfBytes(invoiceModel.pages, {
+  title: 'Invoice',
+  subject: 'Budgetarian invoice',
+  createdAt: TRANSFER_STAMP,
+});
+const invoicePdfText = Buffer.from(invoicePdf).toString('latin1');
+check(
+  'the invoice renders as a PDF 1.4 file',
+  invoicePdfText.startsWith('%PDF-1.4') &&
+    invoicePdfText.includes('%%EOF') &&
+    invoicePdfText.includes('Acme Trading'),
+);
+check(
+  'the PDF contains exactly one page object per preview page',
+  (invoicePdfText.match(/\/Type \/Page(?!s)/g) ?? []).length === invoiceModel.pages.length,
+  String(invoiceModel.pages.length),
+);
+const longInvoice = {
+  ...invoiceConfig,
+  lineItems: Array.from({ length: 45 }, (_, index) => ({
+    id: `line-${index}`,
+    reference: `TXN-${index}`,
+    date: '2026-10-05',
+    description: `Service ${index + 1}`,
+    quantity: '1',
+    unitPrice: '10.00',
+    selected: true,
+  })),
+};
+const longInvoiceModel = buildInvoiceModel(exportSnapshot, longInvoice);
+check(
+  'a long invoice paginates instead of clipping its table',
+  longInvoiceModel.pages.length > 1 &&
+    longInvoiceModel.pages.every((page) => page.items.length > 0),
+  String(longInvoiceModel.pages.length),
+);
+const sanitizedPdf = Buffer.from(
+  buildPdfBytes(
+    [
+      {
+        items: [
+          {
+            type: 'text',
+            text: '\u20B11,234.56 \u2014 \u201Cok\u201D',
+            x: 48,
+            top: 48,
+            size: 10,
+            bold: false,
+            color: '#000000',
+            align: 'left',
+            width: 400,
+          },
+        ],
+      },
+    ],
+    { createdAt: TRANSFER_STAMP },
+  ),
+).toString('latin1');
+check(
+  'PDF text replaces glyphs the standard fonts cannot encode',
+  sanitizedPdf.includes('PHP 1,234.56 - "ok"'),
+);
+check(
+  'PDF text measurement and wrapping stay deterministic',
+  measureText('W', 10) > measureText('i', 10) &&
+    wrapText('Budgetarian export preview', 10, false, 60).length > 1,
+);
+
+// --- Financial report PDF --------------------------------------------
+const reportConfig = createReportConfig(exportSnapshot);
+const reportModel = buildReportModel(exportSnapshot, reportConfig);
+const rangeTotals = computeTotals(
+  filterTransactionsByRange(exportSnapshot.transactions, reportConfig.from, reportConfig.to),
+);
+check(
+  'report totals agree with the app calculation for the filtered rows',
+  reportModel.filtered.length === 2 &&
+    reportModel.totals.income === rangeTotals.income &&
+    reportModel.totals.expense === rangeTotals.expense &&
+    reportModel.totals.remaining === rangeTotals.remaining,
+  JSON.stringify(reportModel.totals),
+);
+const emptyReport = buildReportModel(exportSnapshot, {
+  ...reportConfig,
+  from: '2026-01-01',
+  to: '2026-01-31',
+});
+check(
+  'an empty report range still produces a readable document',
+  emptyReport.filtered.length === 0 &&
+    emptyReport.totals.expense === 0 &&
+    emptyReport.pages.length >= 1,
+);
+check(
+  'report filters reject a backwards range',
+  validateReportConfig({ ...reportConfig, from: '2026-12-01', to: '2026-11-01' }).ok === false,
+);
+const reportPdf = Buffer.from(
+  buildPdfBytes(reportModel.pages, { title: 'Financial report', createdAt: TRANSFER_STAMP }),
+).toString('latin1');
+check(
+  'the report renders as a PDF with its totals',
+  reportPdf.startsWith('%PDF-1.4') &&
+    reportPdf.includes('%%EOF') &&
+    reportPdf.includes('Page 1 of'),
+);
+
+// --- Config reconciliation and naming --------------------------------
+const editedInvoice = createInvoiceConfig(exportSnapshot);
+editedInvoice.lineItems[0] = {
+  ...editedInvoice.lineItems[0],
+  description: 'Edited flight',
+  quantity: '3',
+  selected: true,
+};
+const reconciled = reconcileInvoiceConfig(editedInvoice, exportSnapshot);
+check(
+  'refreshing the budget keeps invoice edits and selections',
+  reconciled.lineItems[0].description === 'Edited flight' &&
+    reconciled.lineItems[0].quantity === '3' &&
+    reconciled.lineItems[0].selected === true,
+);
+const incomeOnlySnapshot = {
+  ...exportSnapshot,
+  transactions: exportSnapshot.transactions.filter((row) => row.type === 'income'),
+  breakdownItems: [],
+};
+check(
+  'refreshing drops invoice lines whose source disappeared',
+  reconcileInvoiceConfig(editedInvoice, incomeOnlySnapshot).lineItems.length === 0,
+);
+check(
+  'export filenames are readable, dated and sanitized',
+  buildExportFileName(exportSnapshot, 'json', '2026-10-26') ===
+    'Budgetarian-Trip-2026-10-26.json' &&
+    buildExportFileName(exportSnapshot, 'invoice', '2026-10-26', { number: 'INV 7/2026' }) ===
+      'Invoice-INV-7-2026-2026-10-26.pdf' &&
+    buildExportFileName(exportSnapshot, 'report', '2026-10-26') ===
+      'Budgetarian-Report-Trip-2026-10-26.pdf',
+);
+check(
+  'machine amounts stay plain and printable amounts use ISO codes',
+  plainAmount(123456, 'PHP') === '1234.56' && documentAmount(123456, 'PHP') === 'PHP 1,234.56',
+);
+check(
+  'the import preview now reports its format version and receipt bytes',
+  validatedTransfer.formatVersion === 1 && validatedTransfer.counts.attachmentBytes === 8,
+  JSON.stringify({ version: validatedTransfer.formatVersion, bytes: validatedTransfer.counts.attachmentBytes }),
 );
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

@@ -142,11 +142,17 @@ export function BudgetImportSheet({ origin = 'budget' }) {
                 },
               ]}
             >
+              <CountRow label="Format" value={`Budgetarian budget v${validation.formatVersion ?? 1}`} />
               <CountRow label="Transactions" value={counts.transactions} />
               <CountRow label="Breakdown items" value={counts.breakdownItems} />
               <CountRow label="New tags" value={counts.tags} />
               <CountRow label="Reminders" value={counts.reminders} />
-              <CountRow label="Receipts" value={counts.attachments} />
+              <CountRow
+                label="Receipts"
+                value={`${counts.attachments}${
+                  counts.attachmentBytes ? ` · ${formatBytes(counts.attachmentBytes)}` : ''
+                }`}
+              />
             </View>
 
             {currencyMismatch ? (
@@ -236,6 +242,14 @@ function CountRow({ label, value }) {
       </Text>
     </View>
   );
+}
+
+/** '1.4 MB' / '320 KB' for the receipt total in the preview. */
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '';
+  const megabytes = bytes / (1024 * 1024);
+  if (megabytes >= 1) return `${megabytes.toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 function FolderRow({

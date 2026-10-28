@@ -111,6 +111,21 @@ export async function exportBudgetTransfer(budgetId, destination = 'save') {
 export async function pickBudgetTransfer() {
   const picked = await pickBackup();
   if (!picked) return null;
+  // The picker filters for JSON on Android, but iOS and the share sheet can
+  // still hand over anything. Reject a PDF/XLSX/CSV by name before the
+  // validator spends time telling the user it is "not valid JSON".
+  if (!/\.json$/i.test(picked.name ?? '')) {
+    return {
+      fileName: picked.name ?? 'budget',
+      validation: {
+        ok: false,
+        issues: [
+          'That file is not a Budgetarian budget file. Choose a .json budget file exported from the app.',
+        ],
+        warnings: [],
+      },
+    };
+  }
   return { fileName: picked.name, validation: parseBudgetTransferText(picked.text) };
 }
 

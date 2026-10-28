@@ -34,7 +34,7 @@ import {
   validateInvoiceConfig,
   validateReportConfig,
 } from '../../utils/budgetExport';
-import { formatCurrency, sanitizeAmount, toMinor } from '../../utils/currency';
+import { formatCurrency, sanitizeAmount } from '../../utils/currency';
 import { formatDateRange, todayIso } from '../../utils/dates';
 
 const FORMAT_ICONS = {
@@ -508,12 +508,6 @@ function InvoiceLineRow({ line, currency, onToggle, onPatch }) {
   const { colors, radius, spacing } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
-  const amount = useMemo(() => {
-    const unit = toMinor(line.unitPrice || '0', currency);
-    const quantity = Number(line.quantity);
-    return Math.round(unit * (Number.isFinite(quantity) && quantity > 0 ? quantity : 0));
-  }, [line.quantity, line.unitPrice, currency]);
-
   return (
     <View
       style={{
@@ -549,7 +543,7 @@ function InvoiceLineRow({ line, currency, onToggle, onPatch }) {
             {line.description}
           </Text>
           <Text variant="caption" tone="faint" style={{ marginTop: 1 }}>
-            from {formatCurrency(amount, { currency })} · {line.date} · {line.reference}
+            {line.date} · {line.reference}
           </Text>
         </View>
         <Pressable
@@ -594,8 +588,6 @@ function InvoiceLineRow({ line, currency, onToggle, onPatch }) {
 }
 
 function TotalRow({ label, value, strong = false }) {
-  const { colors } = useTheme();
-
   return (
     <View style={[styles.rowBetween]}>
       <Text variant={strong ? 'body' : 'caption'} tone={strong ? 'default' : 'muted'}>
@@ -795,6 +787,7 @@ function PreviewStep({ format, snapshot }) {
         {format.id === 'xlsx' ? <WorkbookPreview snapshot={snapshot} /> : null}
         {isDocumentFormat(format.id) ? (
           <DocumentFormatPreview
+            key={`${format.id}:${snapshot.fingerprint}`}
             snapshot={snapshot}
             formatId={format.id}
             config={config}
@@ -1057,10 +1050,6 @@ function DocumentFormatPreview({ snapshot, formatId, config }) {
   const [previewWidth, setPreviewWidth] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
 
-  useEffect(() => {
-    setPageIndex(0);
-  }, [formatId, snapshot.fingerprint]);
-
   const pages = model.pages;
   const safeIndex = Math.min(pageIndex, pages.length - 1);
   const page = pages[safeIndex];
@@ -1154,8 +1143,8 @@ function DocumentFormatPreview({ snapshot, formatId, config }) {
 
       {formatId === 'report' ? (
         <Text variant="caption" tone="muted">
-          {model.filtered.length} transactions in {model.meta.period ?? 'the selected period'} ·{' '}
-          expenses {documentMoney(model.totals.expense, model.currency)} · remaining{' '}
+          {model.filtered.length} transactions in {config?.from} to {config?.to} · expenses{' '}
+          {documentMoney(model.totals.expense, model.currency)} · remaining{' '}
           {documentMoney(model.totals.remaining, model.currency)}
         </Text>
       ) : null}
