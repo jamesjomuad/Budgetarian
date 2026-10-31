@@ -77,9 +77,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stream with a time column, and only that stream scrolls, so the calendar
   stays in view while browsing a busy day. The grid tightens on shorter
   screens to keep that stream usable. Expenses keep their paid/unpaid status,
-  reminders show Pending, Overdue or Completed and still offer Complete and
-  Remind Later, and every row opens its existing transaction or reminder
-  screen.
+  reminders show Pending, Overdue or Completed with Complete and Remind Later
+  behind an Actions toggle, and every row opens its existing transaction or
+  reminder screen.
 - The time picker's Hour and Minute wheels now scroll endlessly in both
   directions. Each column repeats its values and silently recentres on the
   middle copy once the wheel stops, so there is no visible start or end.

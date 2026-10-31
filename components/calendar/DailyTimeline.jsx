@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
 
 import { fontFamilies } from "../../constants/colors";
@@ -242,6 +242,7 @@ const TimelineRow = memo(function TimelineRow({
   onSnoozeReminder,
 }) {
   const { colors, radius, spacing } = useTheme();
+  const [actionsOpen, setActionsOpen] = useState(false);
   const isReminder = activity.kind === "reminder";
   const isExpense = activity.kind === "expense";
   const accent = isReminder
@@ -451,44 +452,71 @@ const TimelineRow = memo(function TimelineRow({
         </Pressable>
 
         {isReminder && status !== "completed" ? (
-          <View style={[styles.actions, { marginTop: spacing.sm }]}>
+          <>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Complete reminder ${title}`}
-              onPress={() => onCompleteReminder(activity.reminder)}
+              accessibilityLabel={
+                actionsOpen ? `Hide actions for ${title}` : `Show actions for ${title}`
+              }
+              accessibilityState={{ expanded: actionsOpen }}
+              onPress={() => setActionsOpen((open) => !open)}
+              hitSlop={6}
               style={({ pressed }) => [
-                styles.actionButton,
-                {
-                  backgroundColor: colors.primarySoft,
-                  borderRadius: radius.pill,
-                  opacity: pressed ? 0.65 : 1,
-                },
+                styles.actionToggleRow,
+                { marginTop: spacing.xs, opacity: pressed ? 0.55 : 1 },
               ]}
             >
-              <Icon name="check" size={13} color={colors.primary} />
-              <Text variant="caption" tone="primary">
-                Complete
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remind me later about ${title}`}
-              onPress={() => onSnoozeReminder(activity.reminder)}
-              style={({ pressed }) => [
-                styles.actionButton,
-                {
-                  backgroundColor: colors.surfaceMuted,
-                  borderRadius: radius.pill,
-                  opacity: pressed ? 0.65 : 1,
-                },
-              ]}
-            >
-              <Icon name="clock" size={13} color={colors.textMuted} />
               <Text variant="caption" tone="muted">
-                Remind later
+                {actionsOpen ? "Hide actions" : "Actions"}
               </Text>
+              <Icon
+                name={actionsOpen ? "chevronUp" : "chevronDown"}
+                size={14}
+                color={colors.textMuted}
+              />
             </Pressable>
-          </View>
+
+            {actionsOpen ? (
+              <View style={[styles.actions, { marginTop: spacing.xs }]}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Complete reminder ${title}`}
+                  onPress={() => onCompleteReminder(activity.reminder)}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    {
+                      backgroundColor: colors.primarySoft,
+                      borderRadius: radius.pill,
+                      opacity: pressed ? 0.65 : 1,
+                    },
+                  ]}
+                >
+                  <Icon name="check" size={13} color={colors.primary} />
+                  <Text variant="caption" tone="primary">
+                    Complete
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remind me later about ${title}`}
+                  onPress={() => onSnoozeReminder(activity.reminder)}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    {
+                      backgroundColor: colors.surfaceMuted,
+                      borderRadius: radius.pill,
+                      opacity: pressed ? 0.65 : 1,
+                    },
+                  ]}
+                >
+                  <Icon name="clock" size={13} color={colors.textMuted} />
+                  <Text variant="caption" tone="muted">
+                    Remind later
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </>
         ) : null}
       </View>
     </View>
@@ -624,6 +652,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 3,
     marginTop: 3,
+  },
+  actionToggleRow: {
+    alignItems: "center",
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    gap: 2,
+    minHeight: 32,
+    paddingLeft: 8,
   },
   actions: {
     flexDirection: "row",
