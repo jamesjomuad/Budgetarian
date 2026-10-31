@@ -61,6 +61,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without a status read as Paid, and the Status control in the transaction
   form appears for both Expense and Income. Transfers keep no payment
   status: the form hides the control for them and the database stores NULL.
+- An "Add" action inline with the Breakdown section header on the
+  transaction form, allowing new items to be added directly without scrolling
+  to the bottom of the card.
 - Multi-select on the Archive screen, using the same shared checkboxes,
   three-state select-all and contextual toolbar as Home and folders. Bulk
   Restore returns every chosen budget through the existing restore rule — to

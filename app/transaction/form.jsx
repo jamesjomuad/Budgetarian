@@ -1481,6 +1481,19 @@ export default function TransactionFormScreen() {
             <SectionHeader
               title={items.length > 0 ? `Breakdown · ${items.length}` : 'Breakdown'}
               fontSize={14}
+              action={
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Add breakdown item"
+                  hitSlop={8}
+                  onPress={openAddItemSheet}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
+                >
+                  <Text variant="label" tone="primary">
+                    Add
+                  </Text>
+                </Pressable>
+              }
             />
             <BreakdownSection
               items={items}
