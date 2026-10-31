@@ -29,8 +29,14 @@ function MonthCalendarView({
   reminderDates,
   onChangeMonth,
   onSelectDate,
+  compact = false,
 }) {
   const { colors, spacing } = useTheme();
+  // Short screens keep the grid fixed above the timeline; shaving a few pixels
+  // per week leaves enough room for the list to remain scrollable. Touch
+  // targets stay comfortably larger than the visual day circle.
+  const cellHeight = compact ? 40 : 48;
+  const daySize = compact ? 30 : 34;
   // The clock read and the 42-cell grid depend on nothing else, so they are
   // computed once per day/month rather than on every re-render (date taps,
   // month slides and the memo wrapper below all re-render this component).
@@ -110,12 +116,14 @@ function MonthCalendarView({
                 onPress={() => onSelectDate(isoDate)}
                 style={({ pressed }) => [
                   styles.cell,
+                  { height: cellHeight },
                   pressed && { backgroundColor: colors.primarySoft },
                 ]}
               >
                 <View
                   style={[
                     styles.day,
+                    { height: daySize, width: daySize },
                     selected && { backgroundColor: colors.primary },
                     isToday && !selected && { borderColor: colors.primary },
                   ]}
