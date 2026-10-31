@@ -119,13 +119,14 @@ export default function SettingsScreen() {
                 </Text>
               </View>
 
-              {/* Rendered even when unselected (transparent) so the row
-                  content never shifts — and a real glyph, not a text ✓. */}
-              <Icon
-                name="check"
-                size={18}
-                color={isSelected ? colors.primary : 'transparent'}
-              />
+              {/* Keep a fixed-size slot so the row content never shifts,
+                  while conditionally mounting the icon so unselected rows
+                  stay completely blank across all platforms. */}
+              <View style={styles.checkSlot}>
+                {isSelected ? (
+                  <Icon name="check" size={18} color={colors.primary} />
+                ) : null}
+              </View>
             </Pressable>
           );
         })}
@@ -187,13 +188,14 @@ export default function SettingsScreen() {
                 </Text>
               </View>
 
-              {/* Rendered even when unselected (transparent) so the row
-                  content never shifts — and a real glyph, not a text ✓. */}
-              <Icon
-                name="check"
-                size={18}
-                color={isSelected ? colors.primary : 'transparent'}
-              />
+              {/* Keep a fixed-size slot so the row content never shifts,
+                  while conditionally mounting the icon so unselected rows
+                  stay completely blank across all platforms. */}
+              <View style={styles.checkSlot}>
+                {isSelected ? (
+                  <Icon name="check" size={18} color={colors.primary} />
+                ) : null}
+              </View>
             </Pressable>
           );
         })}
@@ -392,5 +394,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  checkSlot: {
+    alignItems: "center",
+    height: 18,
+    justifyContent: "center",
+    width: 18,
   },
 });

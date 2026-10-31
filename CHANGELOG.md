@@ -110,6 +110,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unpaid income has no calendar payment event.
 
 ### Fixed
+- Unselected options in Settings (Appearance and Currency) now stay completely
+  blank. Transparent icon color on Android could render opaque glyphs, making
+  all options appear checked on light cards; rows now use empty fixed-size
+  slots so content never shifts while only the active selection displays a check.
 - Needs Attention on Home now flags only real financial trouble. A budget is
   no longer listed just because its period is close to ending — elapsed time
   says nothing about the money. The section shows budgets spending ahead of
