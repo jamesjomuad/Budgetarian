@@ -148,7 +148,7 @@ function TabButton({ descriptor, route, focused, navigate, onMeasure }) {
   );
 }
 
-export function BottomTabBar({ state, descriptors, navigation }) {
+export function BottomTabBar({ state, descriptors, navigateToTab }) {
   const { colors, radius, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
@@ -225,8 +225,12 @@ export function BottomTabBar({ state, descriptors, navigation }) {
   }));
 
   // Tab presses go straight to the navigator — the capsule carries no action
-  // of its own.
-  const navigate = (name) => navigation.navigate(name);
+  // of its own. SDK 58 hands the bar `navigateToTab(routeKey)` instead of a
+  // navigation object, so a destination name resolves to its current key.
+  const navigate = (name) => {
+    const route = routes.find((item) => item.name === name);
+    if (route) navigateToTab(route.key);
+  };
 
   // Air held under the capsule: the Android navigation inset (or a minimum of
   // breathing room) plus the small lift that keeps the bar off the screen edge.

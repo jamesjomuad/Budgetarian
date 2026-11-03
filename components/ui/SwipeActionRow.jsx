@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { Icon } from './Icon';
 import { Text } from './Text';
@@ -9,8 +9,9 @@ import { useTheme } from './ThemeProvider';
 /**
  * SwipeActionRow — generic presentational wrapper that reveals trailing action
  * buttons when the row is swiped to the left. Built on react-native-gesture-handler's
- * `Swipeable`, so vertical scrolling, tap-to-open thresholds, and slide animations
- * follow platform conventions out of the box.
+ * `ReanimatedSwipeable` (the legacy `Swipeable` was removed in v3), so vertical
+ * scrolling, tap-to-open thresholds, and slide animations follow platform
+ * conventions out of the box.
  *
  * It knows nothing about the data it wraps: the screen passes an `actions` array
  * ({ key, label, icon, onPress, tone, accessibilityLabel }) and the row handles
@@ -169,7 +170,7 @@ export function SwipeActionRow({
   );
 
   return (
-    <Swipeable
+    <ReanimatedSwipeable
       ref={swipeRef}
       containerStyle={[styles.row, style]}
       renderRightActions={enabled ? renderRightActions : undefined}
@@ -187,7 +188,7 @@ export function SwipeActionRow({
           />
         ) : null}
       </View>
-    </Swipeable>
+    </ReanimatedSwipeable>
   );
 }
 
