@@ -47,7 +47,7 @@ export const useReportsStore = create((set, get) => ({
   transactions: [],
   tags: [],
   period: periodRange('thisMonth'),
-  summary: { income: 0, expense: 0, remaining: 0, transactionCount: 0 },
+  summary: { income: 0, expense: 0, expectedIncome: 0, expectedExpense: 0, remaining: 0, transactionCount: 0 },
   barGroups: [],
   tagSlices: [],
   trendView: 'monthly',

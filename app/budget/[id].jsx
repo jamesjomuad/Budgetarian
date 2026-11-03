@@ -496,9 +496,11 @@ export default function BudgetDetailScreen() {
 
   const activeTag = tagSummaries.find((entry) => entry.tag.id === activeTagId)?.tag ?? null;
 
-  // Share of income already spent, from the same summary the stats row uses.
-  // Income of zero means nothing to measure against → 0%, never a divide-by-zero.
-  // The label may exceed 100% when expenses outrun income; the fill is clamped.
+  // Share of received income already spent, from the same summary the stats
+  // row uses: both sides are settled money, so an unpaid expense never
+  // inflates the bar. Income of zero means nothing to measure against → 0%,
+  // never a divide-by-zero. The label may exceed 100% when expenses outrun
+  // income; the fill is clamped.
   const spentPercent = summary.income > 0 ? (summary.expense / summary.income) * 100 : 0;
   const spentFill = Math.min(100, Math.max(0, spentPercent));
   const fillColor = spendColor(colors, spentPercent);
@@ -764,6 +766,22 @@ export default function BudgetDetailScreen() {
               valueColor={folderInk}
             />
           </View>
+
+          {summary.expectedExpense > 0 || summary.expectedIncome > 0 ? (
+            <Text variant="caption" tone="muted" style={{ marginTop: spacing.sm }}>
+              {[
+                summary.expectedExpense > 0
+                  ? `${formatCurrency(summary.expectedExpense, { currency })} in unpaid expenses`
+                  : null,
+                summary.expectedIncome > 0
+                  ? `${formatCurrency(summary.expectedIncome, { currency })} in expected income`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}{' '}
+              — not counted above until marked Paid.
+            </Text>
+          ) : null}
         </Card>
 
         <TagsDrawer

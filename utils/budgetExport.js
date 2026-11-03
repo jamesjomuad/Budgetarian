@@ -227,10 +227,11 @@ export function buildBudgetSnapshot(source, options = {}) {
 
   const attachments = sortedRows(source.attachments ?? [], (row) => `${row.transaction_id}|${row.id}`);
   const totals = computeTotals(transactions);
-  const paidExpense = transactions
-    .filter((row) => row.type === 'expense' && row.paymentStatus === 'paid')
-    .reduce((sum, row) => sum + row.amount, 0);
-  const unpaidExpense = totals.expense - paidExpense;
+  // `totals.expense` is settled spend and `totals.expectedExpense` is the
+  // outstanding obligation, so the payment split comes straight from the one
+  // calculation rather than re-reading statuses here.
+  const paidExpense = totals.expense;
+  const unpaidExpense = totals.expectedExpense;
   const spendByTag = computeSpendByTag(transactions, tags)
     .filter((entry) => entry.spent > 0)
     .sort((a, b) => b.spent - a.spent || String(a.tag.name).localeCompare(String(b.tag.name)));
@@ -361,10 +362,9 @@ export function buildWorkbookModel(snapshot) {
     [cell('Folder', 'label'), cell(snapshot.folderName ?? 'No folder')],
     [cell('Currency', 'label'), cell(snapshot.currencyMeta.code)],
     [cell('Received income', 'label'), cell(Number(plainAmount(snapshot.totals.income, snapshot.currency)), 'money')],
-    [cell('Expected income', 'label'), cell(Number(plainAmount(snapshot.totals.expectedIncome, snapshot.currency)), 'money')],
-    [cell('Expenses', 'label'), cell(Number(plainAmount(snapshot.totals.expense, snapshot.currency)), 'money')],
+    [cell('Paid expenses', 'label'), cell(Number(plainAmount(snapshot.totals.expense, snapshot.currency)), 'money')],
     [cell('Remaining', 'label'), cell(Number(plainAmount(snapshot.totals.remaining, snapshot.currency)), 'money')],
-    [cell('Paid expenses', 'label'), cell(Number(plainAmount(snapshot.payment.paidExpense, snapshot.currency)), 'money')],
+    [cell('Expected income', 'label'), cell(Number(plainAmount(snapshot.totals.expectedIncome, snapshot.currency)), 'money')],
     [cell('Unpaid expenses', 'label'), cell(Number(plainAmount(snapshot.payment.unpaidExpense, snapshot.currency)), 'money')],
     [cell('Transactions', 'label'), cell(snapshot.counts.transactions)],
     [cell('Breakdown items', 'label'), cell(snapshot.counts.breakdownItems)],
@@ -926,9 +926,6 @@ export function buildReportModel(snapshot, config) {
   const validation = validateReportConfig(config);
   const filtered = filterTransactionsByRange(snapshot.transactions, config.from, config.to);
   const totals = computeTotals(filtered);
-  const paidExpense = filtered
-    .filter((row) => row.type === 'expense' && row.paymentStatus === 'paid')
-    .reduce((sum, row) => sum + row.amount, 0);
   const currency = snapshot.currency;
   const pages = [];
   let page = pageBase(1);
@@ -984,11 +981,10 @@ export function buildReportModel(snapshot, config) {
 
     const summary = [
       ['Received income', documentAmount(totals.income, currency)],
-      ['Expected income', documentAmount(totals.expectedIncome, currency)],
-      ['Expenses', documentAmount(totals.expense, currency)],
+      ['Paid expenses', documentAmount(totals.expense, currency)],
       ['Remaining', documentAmount(totals.remaining, currency)],
-      ['Paid expenses', documentAmount(paidExpense, currency)],
-      ['Unpaid expenses', documentAmount(totals.expense - paidExpense, currency)],
+      ['Expected income', documentAmount(totals.expectedIncome, currency)],
+      ['Unpaid expenses', documentAmount(totals.expectedExpense, currency)],
     ];
     const columnWidth = DOCUMENT_CONTENT_WIDTH / 3;
     const boxTop = top;

@@ -1,4 +1,5 @@
 import { computeSpendByTag, computeTotals } from './calculations';
+import { isSettled } from './paymentStatus';
 import {
   addDaysIso,
   addMonths,
@@ -137,7 +138,9 @@ export function toPurchaseRows(transactions, events) {
  * Groups for the income-vs-expense bars. 'thisYear' becomes one grouped
  * pair of bars per month (through the current month); every other filter
  * collapses to a single pair. Transfers never count, because
- * computeTotals only reads income and expense rows.
+ * computeTotals only reads income and expense rows, and unpaid rows never
+ * count because computeTotals only reads settled money — so the bars always
+ * match the summary beside them.
  */
 export function buildBarGroups(transactions, filter, period = null) {
   if (filter !== 'thisYear') {
@@ -159,8 +162,9 @@ export function buildBarGroups(transactions, filter, period = null) {
 }
 
 /**
- * Expense share per tag for the pie: only tags with spend appear, sorted
- * highest first, each carrying a percent of total expenses (0..100).
+ * Expense share per tag for the pie: only tags with settled spend appear,
+ * sorted highest first, each carrying a percent of total settled expenses
+ * (0..100). Unpaid obligations are not spend, so they never form a slice.
  */
 export function buildTagSlices(transactions, tags) {
   const rows = computeSpendByTag(transactions, tags)
@@ -230,16 +234,18 @@ export function trendRange(view, offset = 0) {
 }
 
 /**
- * Expense totals per day (monthly), per calendar month (yearly/months), or
- * per calendar year (allTime) for one trend range. Every expense row is
- * counted exactly once by its local transaction_date; income and transfers
- * are skipped. Periods with no spend still appear with amount 0 so gaps
- * stay visible.
+ * Settled expense totals per day (monthly), per calendar month
+ * (yearly/months), or per calendar year (allTime) for one trend range. Only
+ * paid expenses are spend: an unpaid obligation has not left the account, so
+ * it is skipped exactly as income and transfers are. Every counted row lands
+ * exactly once by its local transaction_date. Periods with no spend still
+ * appear with amount 0 so gaps stay visible.
  */
 export function buildTrendBuckets(view, range, transactions) {
   const dayTotals = new Map();
   for (const transaction of transactions) {
     if (transaction.type !== 'expense') continue;
+    if (!isSettled(transaction)) continue;
     const iso = String(transaction.transaction_date);
     if (!isWithin(iso, range.start, range.end)) continue;
     dayTotals.set(iso, (dayTotals.get(iso) ?? 0) + transaction.amount);

@@ -8,9 +8,10 @@ import { derivePaymentEventStatus } from './paymentStatus';
  * them, so spending ahead of received income is the only financial condition a
  * budget can raise.
  *
- * `budget.income` counts received money only (see `computeTotals`), so unpaid
- * income cannot make a budget look safer than it is. Archived budgets never
- * reach these rules: `getBudgets` returns active rows only.
+ * `budget.income` counts received money only and `budget.spent` counts
+ * paid expenses only (see `computeTotals`), so neither an unpaid income nor
+ * an unpaid expense can make a budget look safer than it is. Archived budgets
+ * never reach these rules: `getBudgets` returns active rows only.
  */
 export function attentionBudgets(budgets = []) {
   return budgets

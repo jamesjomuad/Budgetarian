@@ -1,8 +1,10 @@
 /**
  * Payment status of an expense or an income. It is deliberately separate
- * from the transaction `type`: an unpaid expense is still a recorded
- * expense and still counts toward every budget total, while unpaid income
- * is money expected, not yet received — totals read the two apart. The
+ * from the transaction `type`: an unpaid expense is still a recorded expense
+ * — it stays in every list, count and export — but it has not left the
+ * account yet, so it never moves a cash figure. Unpaid income is money
+ * expected, not yet received, and reads the same way. Totals read the two
+ * apart: settled money as actual, unsettled money as outstanding. The
  * status only answers "has the money moved yet?". Transfers never carry
  * one: a move between accounts is not a payment to wait for.
  */
@@ -32,6 +34,21 @@ export function defaultPaymentStatus(value) {
 export function effectivePaymentStatus(row) {
   if (!row || row.type === 'transfer') return null;
   return isValidPaymentStatus(row.payment_status) ? row.payment_status : 'paid';
+}
+
+/**
+ * The one test every cash figure asks before a row may move it: has this
+ * expense or income actually settled? Only settled rows change the remaining
+ * balance, account balances, budget spend or any other actual total; an
+ * unpaid row is recorded and stays visible but never touches those numbers
+ * until it flips to Paid. A missing or legacy status reads as settled, so
+ * rows written before the field existed keep behaving exactly as they did.
+ *
+ * Transfers never settle this way — they have no status and are ruled by
+ * their own "always moves money" rule, so callers handle them separately.
+ */
+export function isSettled(row) {
+  return effectivePaymentStatus(row) === 'paid';
 }
 
 export const PAYMENT_OPTIONS = [

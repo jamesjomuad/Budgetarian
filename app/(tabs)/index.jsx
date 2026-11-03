@@ -391,8 +391,8 @@ export default function HomeScreen() {
             </View>
 
             <Text variant="caption" tone="faint" style={{ marginTop: spacing.sm }}>
-              Income and expenses recorded in {range?.label ?? "this month"}. Archived budgets are
-              not included.
+              Income received and expenses paid in {range?.label ?? "this month"}. Unpaid entries
+              are counted only when they settle. Archived budgets are not included.
             </Text>
           </Card>
 

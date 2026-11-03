@@ -12,6 +12,7 @@ import { DEFAULT_TAGS } from '../../constants/finance';
 import { createId, nowIso } from '../../utils/id';
 import { suggestBudgetDates, toIsoDate, addDaysIso } from '../../utils/dates';
 import { buildRemindAt } from '../../utils/reminders';
+import { isSettled } from '../../utils/paymentStatus';
 import { LATEST_VERSION } from '../database/migrations';
 
 export function createMemoryAdapter({ seedDemo = false } = {}) {
@@ -157,7 +158,8 @@ export function createMemoryAdapter({ seedDemo = false } = {}) {
 
     /**
      * Mirrors SQLite's `listBudgets`: archived (soft-deleted) budgets are
-     * hidden unless `includeArchived` is passed.
+     * hidden unless `includeArchived` is passed. `spent` and `income` count
+     * settled money only, exactly as the SQL above does.
      */
     async listBudgets({ includeArchived = false } = {}) {
       return [...store.budgets]
@@ -170,9 +172,11 @@ export function createMemoryAdapter({ seedDemo = false } = {}) {
           for (const transaction of store.transactions) {
             if (transaction.budget_id !== budget.id) continue;
             transactionCount += 1;
-            if (transaction.type === 'expense') spent += transaction.amount;
-            else if (transaction.type === 'income' && transaction.payment_status !== 'unpaid')
+            if (transaction.type === 'expense') {
+              if (isSettled(transaction)) spent += transaction.amount;
+            } else if (transaction.type === 'income' && isSettled(transaction)) {
               income += transaction.amount;
+            }
           }
           return { ...budget, spent, income, transaction_count: transactionCount };
         });

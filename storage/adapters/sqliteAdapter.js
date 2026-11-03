@@ -70,13 +70,19 @@ export function createSqliteAdapter(getDb) {
      * Budget rows with derived expense/income totals. Soft-deleted (archived)
      * budgets are hidden unless `includeArchived` is passed — only the backup
      * snapshot and the Archive screen need them. Mirrors `listTags`.
+     *
+     * `spent` and `income` are settled money only: an unpaid expense has not
+     * left the budget and an unpaid income has not arrived, so neither moves
+     * the figure (the same rule as `computeTotals`). NULL and any legacy
+     * status read as settled, matching `effectivePaymentStatus`.
      */
     async listBudgets({ includeArchived = false } = {}) {
       return query(`
         SELECT b.*,
           COALESCE(
             (SELECT SUM(t.amount) FROM transactions t
-              WHERE t.budget_id = b.id AND t.type = 'expense'), 0) AS spent,
+              WHERE t.budget_id = b.id AND t.type = 'expense'
+                AND (t.payment_status IS NULL OR t.payment_status != 'unpaid')), 0) AS spent,
           COALESCE(
             (SELECT SUM(t.amount) FROM transactions t
               WHERE t.budget_id = b.id AND t.type = 'income'

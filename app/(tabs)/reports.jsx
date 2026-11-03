@@ -96,6 +96,22 @@ export default function ReportsScreen() {
                   tone={summary.remaining >= 0 ? "income" : "expense"}
                 />
               </View>
+
+              {summary.expectedExpense > 0 || summary.expectedIncome > 0 ? (
+                <Text variant="caption" tone="muted" style={{ marginTop: spacing.sm }}>
+                  {[
+                    summary.expectedExpense > 0
+                      ? `${formatCurrency(summary.expectedExpense, { currency })} in unpaid expenses`
+                      : null,
+                    summary.expectedIncome > 0
+                      ? `${formatCurrency(summary.expectedIncome, { currency })} in expected income`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}{" "}
+                  — excluded above until marked Paid.
+                </Text>
+              ) : null}
             </Card>
 
             <View>

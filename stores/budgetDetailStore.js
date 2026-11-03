@@ -35,7 +35,7 @@ export const useBudgetDetailStore = create((set, get) => {
   return {
     budgetId: null,
     budget: null,
-    summary: { transactionCount: 0, income: 0, expense: 0, remaining: 0 },
+    summary: { transactionCount: 0, income: 0, expense: 0, expectedIncome: 0, expectedExpense: 0, remaining: 0 },
     tagSummaries: [],
     entries: [],
     transactions: [],
@@ -76,7 +76,7 @@ export const useBudgetDetailStore = create((set, get) => {
         if (!budget) {
           set({
             budget: null,
-            summary: { transactionCount: 0, income: 0, expense: 0, remaining: 0 },
+            summary: { transactionCount: 0, income: 0, expense: 0, expectedIncome: 0, expectedExpense: 0, remaining: 0 },
             tagSummaries: [],
             entries: [],
             transactions: [],

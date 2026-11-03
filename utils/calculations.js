@@ -7,32 +7,55 @@
  * is no overspend state anywhere in this module: "spent" is always just the
  * expense transactions recorded against it.
  *
- * Money rule: income reads as RECEIVED money. Unpaid income is expected, so
- * it never lands in `income`, `remaining`, account balances, or total
- * assets — `expectedIncome` keeps it visible apart. Expenses are unchanged:
- * an unpaid expense is still a recorded expense, and allocation semantics
- * never moved.
+ * Money rule: only settled money moves a cash figure. An expense or income
+ * counts toward `income`, `expense`, `remaining`, account balances, budget
+ * spend and every other actual total only once its payment status is Paid;
+ * an unpaid row is recorded but has not moved, so it is held apart as
+ * outstanding — `expectedIncome` (money owed to you) and `expectedExpense`
+ * (money you still owe). Nothing outstanding is ever folded into an actual
+ * balance, and nothing is hidden: `recordedIncome` and `recordedExpense`
+ * carry the full recorded picture for shares, charts and exports. Legacy rows
+ * with no stored status read as settled, so pre-existing data is unchanged.
+ * This is the single place those rules live — screens, stores, adapters and
+ * reports all call through here (the adapters mirror `spent`/`income` in SQL
+ * and memory for the budget list, under the same rule).
  */
 
-import { effectivePaymentStatus } from './paymentStatus';
+import { effectivePaymentStatus, isSettled } from './paymentStatus';
 
 /**
- * Headline money totals for a set of transactions. `income` counts only
- * received money (paid income and legacy rows with no stored status);
- * `expectedIncome` holds unpaid income apart, and `recordedIncome` is both
- * together — the ruler income shares are measured against. `expense` stays
- * every expense recorded, paid or not. `remaining` is received minus spent.
+ * Headline money totals for a set of transactions.
+ *
+ * Actual (cash that has moved):
+ *   - `income`       received money: paid income plus legacy rows with no status
+ *   - `expense`      money spent: paid expenses plus the same legacy rows
+ *   - `remaining`    `income - expense`, the real balance for this set
+ *
+ * Outstanding (recorded, not yet moved):
+ *   - `expectedIncome`  unpaid income — expected, never presented as received
+ *   - `expectedExpense` unpaid expenses — obligations, never presented as spent
+ *
+ * Recorded (everything, for shares and exports):
+ *   - `recordedIncome`  = income + expectedIncome
+ *   - `recordedExpense` = expense + expectedExpense
+ *
+ * Transfers are ignored entirely: they move money between accounts without
+ * creating or spending any.
  */
 export function computeTotals(transactions) {
   let income = 0;
   let expectedIncome = 0;
   let expense = 0;
+  let expectedExpense = 0;
 
   for (const transaction of transactions) {
     if (transaction.type === 'income') {
-      if (effectivePaymentStatus(transaction) === 'unpaid') expectedIncome += transaction.amount;
-      else income += transaction.amount;
-    } else if (transaction.type === 'expense') expense += transaction.amount;
+      if (isSettled(transaction)) income += transaction.amount;
+      else expectedIncome += transaction.amount;
+    } else if (transaction.type === 'expense') {
+      if (isSettled(transaction)) expense += transaction.amount;
+      else expectedExpense += transaction.amount;
+    }
   }
 
   return {
@@ -40,15 +63,18 @@ export function computeTotals(transactions) {
     expectedIncome,
     recordedIncome: income + expectedIncome,
     expense,
+    expectedExpense,
+    recordedExpense: expense + expectedExpense,
     remaining: income - expense,
     transactionCount: transactions.length,
   };
 }
 
 /**
- * Folder balance for one budget period: what it brought in minus what it spent,
- * in the same minor units as everything else. Negative is valid and simply
- * means the period spent more than it earned.
+ * Folder balance for one budget period: what it received minus what it
+ * actually spent, in the same minor units as everything else. Both sides are
+ * settled money only, so an unpaid expense never drags this figure down.
+ * Negative is valid and simply means the period spent more than it earned.
  */
 export function computeBudgetBalance(income = 0, spent = 0) {
   return income - spent;
@@ -64,9 +90,12 @@ export function computeAccountBalance(account, transactions) {
     if (isSource) {
       if (transaction.type === 'income') {
         // Unpaid income is not in the account yet; it cannot raise a balance.
-        if (effectivePaymentStatus(transaction) !== 'unpaid') balance += transaction.amount;
-      } else if (transaction.type === 'expense') balance -= transaction.amount;
-      else if (transaction.type === 'transfer') balance -= transaction.amount;
+        if (isSettled(transaction)) balance += transaction.amount;
+      } else if (transaction.type === 'expense') {
+        // Unpaid expense has not left the account either, so it cannot
+        // lower a balance until it is marked Paid.
+        if (isSettled(transaction)) balance -= transaction.amount;
+      } else if (transaction.type === 'transfer') balance -= transaction.amount;
     }
 
     if (isDestination) balance += transaction.amount;
@@ -83,8 +112,8 @@ export function computeTotalAssets(accounts, transactions) {
 }
 
 /**
- * Expense spend per tag, keyed by tag id. Only expenses count, so income and
- * transfers never inflate a tag's total.
+ * Expense spend per tag, keyed by tag id. Only settled expenses count, so
+ * income, transfers and unpaid obligations never inflate a tag's total.
  */
 export function computeSpendByTag(transactions, tags = []) {
   const totals = new Map();
@@ -92,6 +121,7 @@ export function computeSpendByTag(transactions, tags = []) {
   for (const transaction of transactions) {
     if (transaction.type !== 'expense') continue;
     if (!transaction.tag_id) continue;
+    if (!isSettled(transaction)) continue;
     totals.set(transaction.tag_id, (totals.get(transaction.tag_id) ?? 0) + transaction.amount);
   }
 
@@ -102,13 +132,13 @@ export function computeSpendByTag(transactions, tags = []) {
 }
 
 /**
- * Per-tag budget breakdown in one pass: signed amount, expense amount, and
- * each tag's expense share of the budget's total expenses. Income counts as a
- * positive signed amount, expense counts as a negative signed amount and also
- * contributes to its expense share, and transfers never count — the same
- * transfer rule as computeTotals. `computeSpendByTag` stays expense-only for
- * reports. A zero total expense, missing tag reference, or tag with no
- * transactions safely produces 0%.
+ * Per-tag budget breakdown in one pass: signed amount, settled expense amount,
+ * and each tag's expense share of the budget's settled total expenses. Income
+ * counts as a positive signed amount and expense as a negative one — both only
+ * once settled, so an unpaid row never distorts a tag's bar — and transfers
+ * never count: the same transfer rule as computeTotals. `computeSpendByTag`
+ * stays expense-only for reports. A zero total expense, missing tag
+ * reference, or tag with no transactions safely produces 0%.
  */
 export function computeTagExpenseBreakdown(transactions, tags = [], totalExpense = 0) {
   const signedTotals = new Map();
@@ -118,8 +148,10 @@ export function computeTagExpenseBreakdown(transactions, tags = [], totalExpense
     if (!transaction.tag_id) continue;
 
     if (transaction.type === 'income') {
+      if (!isSettled(transaction)) continue;
       signedTotals.set(transaction.tag_id, (signedTotals.get(transaction.tag_id) ?? 0) + transaction.amount);
     } else if (transaction.type === 'expense') {
+      if (!isSettled(transaction)) continue;
       const current = expenseTotals.get(transaction.tag_id) ?? 0;
       expenseTotals.set(transaction.tag_id, current + transaction.amount);
       signedTotals.set(transaction.tag_id, (signedTotals.get(transaction.tag_id) ?? 0) - transaction.amount);
@@ -139,11 +171,12 @@ export function computeTagExpenseBreakdown(transactions, tags = [], totalExpense
 
 /**
  * One transaction's share of the matching budget total. Expenses are measured
- * against total expenses and income against total recorded income
- * (`recordedIncome` from computeTotals when present, so paid and unpaid
- * income rows share one ruler); transfers have no
- * applicable share and return null so the UI can hide them. Both totals come
- * from computeTotals, keeping this formula aligned with the budget summary.
+ * against total recorded expenses and income against total recorded income
+ * (`recordedIncome`/`recordedExpense` from computeTotals when present, so
+ * paid and unpaid rows of the same type share one ruler and no row can claim
+ * more than 100%); transfers have no applicable share and return null so the
+ * UI can hide them. Both totals come from computeTotals, keeping this formula
+ * aligned with the budget summary.
  */
 export function computeTransactionSharePercent(
   transaction,
@@ -155,7 +188,7 @@ export function computeTransactionSharePercent(
     transaction.type === 'income'
       ? totals.recordedIncome ?? totals.income
       : transaction.type === 'expense'
-        ? totals.expense
+        ? totals.recordedExpense ?? totals.expense
         : 0;
 
   if (!Number.isFinite(total) || total <= 0) return 0;

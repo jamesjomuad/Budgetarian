@@ -861,7 +861,7 @@ function JsonPreview({ snapshot }) {
           label="Money in this budget"
           value={`${formatCurrency(snapshot.totals.recordedIncome, {
             currency: snapshot.currency,
-          })} in · ${formatCurrency(snapshot.totals.expense, {
+          })} in · ${formatCurrency(snapshot.totals.recordedExpense, {
             currency: snapshot.currency,
           })} out`}
         />

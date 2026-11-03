@@ -8,6 +8,7 @@ import {
   computeAccountBalance,
   computeBudgetBalance,
   computeSpendByTag,
+  computeTagExpenseBreakdown,
   computeTotals,
   computeTotalAssets,
 } from '../utils/calculations.js';
@@ -1832,10 +1833,43 @@ async function runScenario(store) {
     created_at: STAMP,
     updated_at: STAMP,
   });
+  // The expense side of the same rule: an unpaid obligation never reaches the
+  // budget's `spent` figure, and flipping it to Paid applies the subtraction.
+  await store.insertTransaction({
+    id: 'p_expense_unpaid',
+    budget_id: 'p_status_budget',
+    type: 'expense',
+    amount: 50_000,
+    tag_id: null,
+    account_id: null,
+    to_account_id: null,
+    description: 'Invoice not settled',
+    transaction_date: '2026-10-07',
+    payment_status: 'unpaid',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertTransaction({
+    id: 'p_expense_paid',
+    budget_id: 'p_status_budget',
+    type: 'expense',
+    amount: 30_000,
+    tag_id: null,
+    account_id: null,
+    to_account_id: null,
+    description: 'Groceries',
+    transaction_date: '2026-10-07',
+    payment_status: 'paid',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
   snapshot.statusIncomeStored = (await store.getTransaction('p_income_expected')).payment_status;
   snapshot.statusBudgetIncome = (await store.listBudgets()).find(
     (budget) => budget.id === 'p_status_budget',
   ).income;
+  snapshot.statusBudgetSpent = (await store.listBudgets()).find(
+    (budget) => budget.id === 'p_status_budget',
+  ).spent;
   await store.updateTransaction({
     ...(await store.getTransaction('p_income_expected')),
     payment_status: 'paid',
@@ -1844,6 +1878,23 @@ async function runScenario(store) {
   snapshot.statusBudgetIncomeAfterFlip = (await store.listBudgets()).find(
     (budget) => budget.id === 'p_status_budget',
   ).income;
+  await store.updateTransaction({
+    ...(await store.getTransaction('p_expense_unpaid')),
+    payment_status: 'paid',
+    updated_at: STAMP,
+  });
+  snapshot.statusBudgetSpentAfterFlip = (await store.listBudgets()).find(
+    (budget) => budget.id === 'p_status_budget',
+  ).spent;
+  // Archiving only hides the row: the settled figures survive for the
+  // Archive screen and for backups, and the active list stops showing them.
+  await store.setBudgetArchived('p_status_budget', STAMP, STAMP);
+  snapshot.statusBudgetArchivedHidden = (await store.listBudgets()).some(
+    (budget) => budget.id === 'p_status_budget',
+  );
+  snapshot.statusBudgetArchivedSpent = (
+    await store.listBudgets({ includeArchived: true })
+  ).find((budget) => budget.id === 'p_status_budget')?.spent;
   await store.clearAllData();
 
   return stable(snapshot);
@@ -1917,6 +1968,28 @@ check(
     memoryResult.statusBudgetIncome === 800_000 &&
     sqliteResult.statusBudgetIncomeAfterFlip === 1_100_000 &&
     memoryResult.statusBudgetIncomeAfterFlip === 1_100_000,
+);
+check(
+  'both engines keep unpaid expenses out of spent until they settle',
+  sqliteResult.statusBudgetSpent === 30_000 &&
+    memoryResult.statusBudgetSpent === 30_000 &&
+    sqliteResult.statusBudgetSpentAfterFlip === 80_000 &&
+    memoryResult.statusBudgetSpentAfterFlip === 80_000,
+  JSON.stringify({
+    sqlite: [sqliteResult.statusBudgetSpent, sqliteResult.statusBudgetSpentAfterFlip],
+    memory: [memoryResult.statusBudgetSpent, memoryResult.statusBudgetSpentAfterFlip],
+  }),
+);
+check(
+  'archiving hides the budget from active lists without touching its settled figures',
+  sqliteResult.statusBudgetArchivedHidden === false &&
+    memoryResult.statusBudgetArchivedHidden === false &&
+    sqliteResult.statusBudgetArchivedSpent === 80_000 &&
+    memoryResult.statusBudgetArchivedSpent === 80_000,
+  JSON.stringify({
+    sqlite: [sqliteResult.statusBudgetArchivedHidden, sqliteResult.statusBudgetArchivedSpent],
+    memory: [memoryResult.statusBudgetArchivedHidden, memoryResult.statusBudgetArchivedSpent],
+  }),
 );
 check(
   'search treats LIKE wildcards as literal text',
@@ -2320,7 +2393,14 @@ check(
   unpaidIncomeTotals.income === 8_000 &&
     unpaidIncomeTotals.expectedIncome === 4_000 &&
     unpaidIncomeTotals.recordedIncome === 12_000 &&
-    unpaidIncomeTotals.remaining === 7_000,
+    unpaidIncomeTotals.remaining === 8_000,
+  JSON.stringify(unpaidIncomeTotals),
+);
+check(
+  'an unpaid expense is an obligation, not money spent',
+  unpaidIncomeTotals.expense === 0 &&
+    unpaidIncomeTotals.expectedExpense === 1_000 &&
+    unpaidIncomeTotals.recordedExpense === 1_000,
   JSON.stringify(unpaidIncomeTotals),
 );
 check(
@@ -2334,7 +2414,8 @@ check(
       [{ account_id: 'acct_status', type: 'income', amount: 500, payment_status: 'paid' }],
     ) === 500,
 );
-// The status is descriptive only: both kinds of expense count the same way.
+// Only settled money moves an actual total: the unpaid expense stays visible
+// as an obligation while the paid one is the only thing spent.
 const mixedStatuses = [
   { id: 'm1', type: 'expense', amount: 1_000, payment_status: 'unpaid' },
   { id: 'm2', type: 'expense', amount: 2_000, payment_status: 'paid' },
@@ -2342,9 +2423,213 @@ const mixedStatuses = [
 ];
 const statusTotals = computeTotals(mixedStatuses);
 check(
-  'paid and unpaid expenses contribute identically to totals',
-  statusTotals.expense === 3_000 && statusTotals.income === 5_000 && statusTotals.remaining === 2_000,
+  'only the paid expense counts as spend; the unpaid one is held apart',
+  statusTotals.expense === 2_000 &&
+    statusTotals.expectedExpense === 1_000 &&
+    statusTotals.recordedExpense === 3_000 &&
+    statusTotals.income === 5_000 &&
+    statusTotals.remaining === 3_000,
   JSON.stringify(statusTotals),
+);
+
+// --- payment-status balance rules -----------------------------------------
+// The spec's core table, exercised end to end: only Paid income and Paid
+// expenses may move an actual balance, and flipping the status applies or
+// reverses the effect without ever touching the amount.
+const balanceAccount = { id: 'acct_rules', name: 'Rules', initial_balance: 1_000_000 };
+const balanceRows = [
+  { id: 'r1', account_id: 'acct_rules', type: 'expense', amount: 200_000, payment_status: 'unpaid' },
+  { id: 'r2', account_id: 'acct_rules', type: 'expense', amount: 200_000, payment_status: 'paid' },
+  { id: 'r3', account_id: 'acct_rules', type: 'income', amount: 300_000, payment_status: 'unpaid' },
+  { id: 'r4', account_id: 'acct_rules', type: 'income', amount: 300_000, payment_status: 'paid' },
+];
+const balanceOf = (rows) => computeAccountBalance(balanceAccount, rows);
+
+check(
+  'an unpaid expense leaves the balance untouched while a paid one subtracts',
+  balanceOf([balanceRows[0]]) === 1_000_000 &&
+    balanceOf([balanceRows[1]]) === 800_000,
+  String(balanceOf([balanceRows[0]])),
+);
+check(
+  'an unpaid income adds nothing while a paid one credits the balance',
+  balanceOf([balanceRows[2]]) === 1_000_000 &&
+    balanceOf([balanceRows[3]]) === 1_300_000,
+  String(balanceOf([balanceRows[2]])),
+);
+check(
+  'every paid and unpaid row together lands on the settled total only',
+  balanceOf(balanceRows) === 1_100_000,
+  String(balanceOf(balanceRows)),
+);
+check(
+  'the totals agree with the account balance for the same settled rows',
+  (() => {
+    const totals = computeTotals(balanceRows);
+    const settledNet = totals.income - totals.expense;
+    return settledNet === 100_000 && balanceAccount.initial_balance + settledNet === 1_100_000;
+  })(),
+  'totals must equal settled income minus settled expense',
+);
+
+// Paid → Unpaid reverses the effect; Unpaid → Paid applies it. The amount
+// itself never changes — only the status does.
+const beforeFlip = balanceOf(balanceRows);
+const flippedToUnpaid = balanceRows.map((row) =>
+  row.id === 'r4' ? { ...row, payment_status: 'unpaid' } : row,
+);
+const flippedToPaid = balanceRows.map((row) =>
+  row.id === 'r1' ? { ...row, payment_status: 'paid' } : row,
+);
+check(
+  'marking Paid income Unpaid takes its 3,000 back out of the balance',
+  balanceOf(flippedToUnpaid) === beforeFlip - 300_000,
+  String(balanceOf(flippedToUnpaid)),
+);
+check(
+  'marking an Unpaid expense Paid subtracts it once',
+  balanceOf(flippedToPaid) === beforeFlip - 200_000,
+  String(balanceOf(flippedToPaid)),
+);
+check(
+  'a status change never rewrites the amount',
+  flippedToUnpaid.every((row) => row.amount === balanceRows.find((r) => r.id === row.id).amount) &&
+    flippedToPaid.every((row) => row.amount === balanceRows.find((r) => r.id === row.id).amount),
+  'amounts must be untouched',
+);
+
+// Transfers keep their own rule in every status world: they move money
+// between accounts and never become income or expense.
+const transferRows = [
+  { id: 'tr1', account_id: 'acct_rules', to_account_id: 'acct_other', type: 'transfer', amount: 100_000 },
+];
+const transferTotals = computeTotals(transferRows);
+check(
+  'transfers stay out of income, expense and remaining under every status rule',
+  transferTotals.income === 0 &&
+    transferTotals.expense === 0 &&
+    transferTotals.expectedExpense === 0 &&
+    transferTotals.remaining === 0 &&
+    computeAccountBalance(balanceAccount, transferRows) === 900_000 &&
+    computeAccountBalance({ id: 'acct_other', initial_balance: 0 }, transferRows) === 100_000,
+  JSON.stringify(transferTotals),
+);
+check(
+  'a transfer never gains a payment status',
+  computeTotals([{ id: 'tr2', type: 'transfer', amount: 1, payment_status: 'unpaid' }])
+    .expectedExpense === 0 &&
+    computeTotals([{ id: 'tr2', type: 'transfer', amount: 1, payment_status: 'unpaid' }])
+      .expectedIncome === 0,
+  'transfers must not be classified as outstanding either',
+);
+
+// A breakdown parent's status travels to its items, and the parent is always
+// replaced by those items — so an unpaid parent's purchases are outstanding
+// obligations counted exactly once, never as spent cash.
+check(
+  'breakdown items inherit the parent status and are never counted twice',
+  (() => {
+    const parent = {
+      id: 'bd1',
+      type: 'expense',
+      amount: 300,
+      transaction_date: '2026-10-05',
+      has_breakdown: 1,
+      payment_status: 'unpaid',
+      subTransactions: [],
+    };
+    const rows = toPurchaseRows(
+      [parent],
+      [
+        { id: 'i1', transaction_id: 'bd1', description: 'A', amount: 200, purchase_date: '2026-10-06', parent_type: 'expense' },
+        { id: 'i2', transaction_id: 'bd1', description: 'B', amount: 100, purchase_date: '2026-10-07', parent_type: 'expense' },
+      ],
+    );
+    const totals = computeTotals(rows);
+    return (
+      rows.length === 2 &&
+      totals.recordedExpense === 300 &&
+      totals.expense === 0 &&
+      totals.expectedExpense === 300
+    );
+  })(),
+  'an unpaid breakdown must be outstanding exactly once',
+);
+
+// Per-tag bars use the same settled rule as the summary they sit under, so a
+// tag can never look like it spent money that has not moved yet.
+check(
+  'tag spend and tag shares only ever read settled rows',
+  (() => {
+    const tags = [{ id: 'tg1', name: 'Food' }];
+    const rows = [
+      { id: 's1', type: 'expense', tag_id: 'tg1', amount: 400, payment_status: 'paid' },
+      { id: 's2', type: 'expense', tag_id: 'tg1', amount: 600, payment_status: 'unpaid' },
+      { id: 's3', type: 'income', tag_id: 'tg1', amount: 500, payment_status: 'paid' },
+      { id: 's4', type: 'income', tag_id: 'tg1', amount: 500, payment_status: 'unpaid' },
+    ];
+    const spend = computeSpendByTag(rows, tags)[0].spent;
+    const [breakdown] = computeTagExpenseBreakdown(rows, tags, 400);
+    // Settled income +500 and settled expense -400 → signed +100, and the
+    // unpaid pair on both sides contributes nothing at all.
+    return spend === 400 && breakdown.expense === 400 && breakdown.spent === 100;
+  })(),
+  'unpaid rows must never reach a tag total',
+);
+
+// A legacy row with no stored status keeps reading as settled money, so
+// nothing written before the field existed changes value.
+check(
+  'a missing status still reads as settled, not as outstanding',
+  (() => {
+    const legacy = computeTotals([
+      { id: 'l1', type: 'expense', amount: 700 },
+      { id: 'l2', type: 'income', amount: 900 },
+    ]);
+    const settled = computeTotals([
+      { id: 'l1', type: 'expense', amount: 700, payment_status: 'paid' },
+      { id: 'l2', type: 'income', amount: 900, payment_status: 'paid' },
+    ]);
+    return (
+      legacy.income === 900 &&
+      legacy.expense === 700 &&
+      legacy.remaining === 200 &&
+      legacy.expectedIncome === 0 &&
+      legacy.expectedExpense === 0 &&
+      legacy.income === settled.income &&
+      legacy.expense === settled.expense
+    );
+  })(),
+  'legacy rows must behave exactly like Paid rows',
+);
+
+// Dashboard and budget summaries must never disagree: the budget list row
+// (adapter SQL) and computeTotals over the same transactions both report
+// settled money only.
+check(
+  'dashboard remaining and budget summary remaining agree',
+  (() => {
+    const rows = [
+      { id: 'a1', budget_id: 'b_rules', type: 'income', amount: 500_000, payment_status: 'paid' },
+      { id: 'a2', budget_id: 'b_rules', type: 'income', amount: 100_000, payment_status: 'unpaid' },
+      { id: 'a3', budget_id: 'b_rules', type: 'expense', amount: 300_000, payment_status: 'paid' },
+      { id: 'a4', budget_id: 'b_rules', type: 'expense', amount: 150_000, payment_status: 'unpaid' },
+      { id: 'a5', budget_id: 'b_rules', type: 'transfer', amount: 50_000 },
+    ];
+    const summary = computeTotals(rows);
+    const settledIncome = rows
+      .filter((r) => r.type === 'income' && r.payment_status === 'paid')
+      .reduce((n, r) => n + r.amount, 0);
+    const settledExpense = rows
+      .filter((r) => r.type === 'expense' && r.payment_status === 'paid')
+      .reduce((n, r) => n + r.amount, 0);
+    return (
+      summary.remaining === settledIncome - settledExpense &&
+      computeBudgetBalance(settledIncome, settledExpense) === summary.remaining &&
+      summary.remaining === 200_000
+    );
+  })(),
+  'remaining must be settled income minus settled expense everywhere',
 );
 
 console.log('\n--- amount entry ---');
@@ -3033,6 +3318,16 @@ check(
   JSON.stringify(roundTrip.counts),
 );
 check(
+  'a backup round-trip preserves every payment status',
+  roundTrip.ok &&
+    roundTrip.data.transactions.find((row) => row.id === 'tx_1')?.payment_status === 'paid' &&
+    roundTrip.data.transactions.find((row) => row.id === 'tx_2')?.payment_status === 'unpaid' &&
+    // A legacy NULL status normalises to Paid on restore — the same value
+    // `effectivePaymentStatus` already reads it as, so no history changes.
+    roundTrip.data.transactions.find((row) => row.id === 'tx_3')?.payment_status === 'paid',
+  JSON.stringify(roundTrip.data.transactions.map((row) => [row.id, row.payment_status])),
+);
+check(
   'the round trip preserves the envelope metadata for the preview',
   roundTrip.ok && roundTrip.createdAt === '2026-10-12T00:00:00.000Z' && roundTrip.appVersion === '1.2.3',
 );
@@ -3515,8 +3810,14 @@ check(
   );
   check(
     'the restored budget keeps its derived totals correct',
-    after.budgets[0].income === 4500000 && after.budgets[0].spent === 22345,
+    after.budgets[0].income === 4500000 && after.budgets[0].spent === 10000,
     JSON.stringify({ income: after.budgets[0].income, spent: after.budgets[0].spent }),
+  );
+  check(
+    'a restored unpaid expense stays out of the budget spent figure',
+    after.transactions.find((row) => row.id === 'tx_2')?.payment_status === 'unpaid' &&
+      after.budgets[0].spent === 10000,
+    JSON.stringify(after.transactions.find((row) => row.id === 'tx_2')),
   );
 }
 
@@ -4108,8 +4409,8 @@ check(
 );
 const appliedRow = (await applyStore.listBudgets()).find((row) => row.id === appliedBudget.id);
 check(
-  'the imported budget reports its own income and expenses',
-  appliedRow.income === 20000 && appliedRow.spent === 5000,
+  'the imported budget reports received income and paid expenses only',
+  appliedRow.income === 20000 && appliedRow.spent === 0,
   JSON.stringify({ income: appliedRow?.income, spent: appliedRow?.spent }),
 );
 const appliedTransactions = await applyStore.listTransactionsByBudget(appliedBudget.id);
@@ -4272,9 +4573,12 @@ check(
   'the snapshot totals follow the app financial rules',
   exportSnapshot.totals.income === 20000 &&
     exportSnapshot.totals.expectedIncome === 0 &&
-    exportSnapshot.totals.expense === 5000 &&
-    exportSnapshot.totals.remaining === 15000 &&
-    exportSnapshot.payment.unpaidExpense === 5000,
+    exportSnapshot.totals.expense === 0 &&
+    exportSnapshot.totals.expectedExpense === 5000 &&
+    exportSnapshot.totals.recordedExpense === 5000 &&
+    exportSnapshot.totals.remaining === 20000 &&
+    exportSnapshot.payment.unpaidExpense === 5000 &&
+    exportSnapshot.payment.paidExpense === 0,
   JSON.stringify(exportSnapshot.totals),
 );
 check(

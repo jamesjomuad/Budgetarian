@@ -80,6 +80,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of a false success.
 
 ### Changed
+- Remaining balance is now payment-status aware everywhere. Only a Paid
+  expense actually subtracts money and only a Paid income actually adds it,
+  so the remaining balance, account balances, total assets, budget spend, tag
+  breakdowns, the Home dashboard, Reports and every export all read the same
+  real cash picture. An Unpaid row stays fully visible in lists, the Calendar
+  and every export, but is held apart instead of folded into cash: unpaid
+  expenses are reported as outstanding obligations and unpaid income as
+  expected income, and each moves into the actual totals the moment it is
+  marked Paid — and back out again if it returns to Unpaid. A status change
+  never edits the amount, transfers keep their existing rules, reminder
+  completion still never marks anything Paid, and rows recorded before the
+  status existed keep reading as Paid. Budget export summaries now list
+  Received income, Paid expenses, Remaining, Expected income and Unpaid
+  expenses as their own figures, and the budget and Reports screens name the
+  outstanding amounts they leave out.
 - The Calendar now holds a fixed month grid above a daily timeline. The
   selected date lists its expenses, income and reminders in one chronological
   stream with a time column, and only that stream scrolls, so the calendar
