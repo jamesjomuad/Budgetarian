@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams, useNavigation } from "expo-router";
+import { router, useLocalSearchParams, useNavigation, usePreventRemove } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
@@ -83,6 +83,20 @@ export default function BudgetFormScreen() {
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(editing);
+
+  // Leaving an edited budget saves it first. SDK 58 removed the navigator's
+  // `beforeRemove` event, so `usePreventRemove` owns the hold; the effect
+  // below stores its freshest save closure here so the hook stays simple.
+  const leaveHandlerRef = useRef(null);
+  const currentSnapshot =
+    editing && baseline !== null
+      ? budgetSnapshot({ name, startDate, endDate, color, folderId })
+      : null;
+  const preventLeave =
+    !loading && currentSnapshot !== null && currentSnapshot !== baseline;
+  usePreventRemove(preventLeave, ({ repeat }) => {
+    leaveHandlerRef.current?.(repeat);
+  });
 
   useEffect(() => {
     loadFolders();
@@ -180,6 +194,8 @@ export default function BudgetFormScreen() {
   // is meaningfully dirty, so an untouched visit performs zero writes and
   // zero toasts. Create mode keeps its explicit button.
   useEffect(() => {
+    // The stored handler is only valid for the render that armed the hook.
+    leaveHandlerRef.current = null;
     if (!editing || loading || baseline === null) return undefined;
 
     const values = { name, startDate, endDate, color, folderId };
@@ -229,17 +245,19 @@ export default function BudgetFormScreen() {
       return savePromiseRef.current;
     }
 
-    const beforeRemove = (event) => {
-      if (discardingRef.current) return; // Delete owns this departure.
-      // The save may already have landed: treat that as clean and let this
-      // departure through untouched.
-      if (snapshot === baselineRef.current) return;
-      event.preventDefault();
+    // The router blocked a departure: save once, then re-dispatch the action
+    // `repeat` carries. Delete owns its own departure, and a save that already
+    // landed counts as clean, so both are let straight through.
+    leaveHandlerRef.current = (repeat) => {
+      if (discardingRef.current || snapshot === baselineRef.current) {
+        repeat();
+        return;
+      }
       if (leavePlannedRef.current) return; // a departure is already scheduled.
       leavePlannedRef.current = true;
       ensureSave().then((outcome) => {
         leavePlannedRef.current = false;
-        if (outcome === "saved") router.back();
+        if (outcome === "saved") repeat();
       });
     };
 
@@ -249,10 +267,9 @@ export default function BudgetFormScreen() {
       ensureSave();
     };
 
-    const unsubscribeRemove = navigation.addListener("beforeRemove", beforeRemove);
     const unsubscribeBlur = navigation.addListener("blur", onBlur);
     return () => {
-      unsubscribeRemove();
+      leaveHandlerRef.current = null;
       unsubscribeBlur();
     };
   }, [

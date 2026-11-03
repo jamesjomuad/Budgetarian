@@ -1,4 +1,10 @@
-import { router, useFocusEffect, useLocalSearchParams, useNavigation } from "expo-router";
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+  useNavigation,
+  usePreventRemove,
+} from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, View } from "react-native";
 
@@ -46,6 +52,17 @@ export default function FolderFormScreen() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(editing);
 
+  // Same departure hold as the budget form: SDK 58 removed `beforeRemove`,
+  // so the router hook asks this stored handler to save before leaving.
+  const leaveHandlerRef = useRef(null);
+  const currentSnapshot =
+    editing && baseline !== null ? folderSnapshot({ name, color }) : null;
+  const preventLeave =
+    !loading && currentSnapshot !== null && currentSnapshot !== baseline;
+  usePreventRemove(preventLeave, ({ repeat }) => {
+    leaveHandlerRef.current?.(repeat);
+  });
+
   useFocusEffect(
     useCallback(() => {
       if (!editing) return undefined;
@@ -85,6 +102,7 @@ export default function FolderFormScreen() {
   // Auto-save for edits: same lifecycle rules as the budget form — leave or
   // blur saves real changes exactly once; an untouched visit writes nothing.
   useEffect(() => {
+    leaveHandlerRef.current = null;
     if (!editing || loading || baseline === null) return undefined;
 
     const values = { name, color };
@@ -126,15 +144,18 @@ export default function FolderFormScreen() {
       return savePromiseRef.current;
     }
 
-    const beforeRemove = (event) => {
-      if (discardingRef.current) return;
-      if (snapshot === baselineRef.current) return;
-      event.preventDefault();
+    // Delete owns its departure, and a save that already landed counts as
+    // clean, so both are let straight through; everything else saves first.
+    leaveHandlerRef.current = (repeat) => {
+      if (discardingRef.current || snapshot === baselineRef.current) {
+        repeat();
+        return;
+      }
       if (leavePlannedRef.current) return;
       leavePlannedRef.current = true;
       ensureSave().then((outcome) => {
         leavePlannedRef.current = false;
-        if (outcome === "saved") router.back();
+        if (outcome === "saved") repeat();
       });
     };
 
@@ -144,10 +165,9 @@ export default function FolderFormScreen() {
       ensureSave();
     };
 
-    const unsubscribeRemove = navigation.addListener("beforeRemove", beforeRemove);
     const unsubscribeBlur = navigation.addListener("blur", onBlur);
     return () => {
-      unsubscribeRemove();
+      leaveHandlerRef.current = null;
       unsubscribeBlur();
     };
   }, [editing, loading, baseline, name, color, id, editFolder, navigation]);

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { formatCurrency } from '../../utils/currency';
 import { formatShortDate, formatTime } from '../../utils/dates';
+import { SelectionCheckbox } from '../selection/SelectionCheckbox';
 import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
 import { Icon } from '../ui/Icon';
@@ -29,6 +30,11 @@ const HANDLE_MIN_HEIGHT = 56;
  * Deletion feedback is the app-wide bottom snackbar with Undo, raised by the
  * form; reordering only changes positions — the parent total is the sum, so
  * it can never move.
+ *
+ * While the form is in selection mode the drag handle gives way to a child
+ * checkbox and a row tap toggles that row instead of opening the sheet, so a
+ * selection gesture can never start a drag. The parent screen owns the
+ * selection state and the bulk actions; this section only renders them.
  */
 export function BreakdownSection({
   items,
@@ -37,6 +43,9 @@ export function BreakdownSection({
   onOpenItem,
   onReorder,
   onDragStateChange,
+  selectionMode = false,
+  isSelected = () => false,
+  onToggleSelect = () => {},
 }) {
   const { colors, radius, spacing } = useTheme();
   const [drag, setDrag] = useState(null); // { id, originTop, height, dy }
@@ -135,6 +144,9 @@ export function BreakdownSection({
           onMove={move}
           onEnd={end}
           onOpen={() => onOpenItem(item)}
+          selectionMode={selectionMode}
+          selected={isSelected(item.id)}
+          onToggleSelect={onToggleSelect}
         />
       ))}
 
@@ -173,6 +185,9 @@ function BreakdownRow({
   onMove,
   onEnd,
   onOpen,
+  selectionMode,
+  selected,
+  onToggleSelect,
 }) {
   const { colors, spacing } = useTheme();
   const isDragging = drag?.id === item.id;
@@ -214,26 +229,49 @@ function BreakdownRow({
           : null,
       ]}
     >
-      <View
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderTerminationRequest={() => false}
-        onResponderGrant={(event) => onGrant(item.id, event.nativeEvent.pageY)}
-        onResponderMove={(event) => onMove(item.id, event.nativeEvent.pageY)}
-        onResponderRelease={onEnd}
-        onResponderTerminate={onEnd}
-        accessibilityLabel={`Reorder ${item.description}. Position ${index + 1} of ${count}`}
-        accessibilityHint="Drag to reorder. Or open the item and use Move up or Move down."
-        style={styles.handle}
-      >
-        <Icon name="drag" size={16} color={isDragging ? colors.primary : colors.textFaint} />
-      </View>
+      {selectionMode ? (
+        <View style={styles.handle}>
+          <SelectionCheckbox
+            state={selected}
+            onPress={() => onToggleSelect(item.id)}
+            accessibilityLabel={
+              selected ? `Deselect ${item.description}` : `Select ${item.description}`
+            }
+            nested
+            hitSlop={11}
+          />
+        </View>
+      ) : (
+        <View
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderTerminationRequest={() => false}
+          onResponderGrant={(event) => onGrant(item.id, event.nativeEvent.pageY)}
+          onResponderMove={(event) => onMove(item.id, event.nativeEvent.pageY)}
+          onResponderRelease={onEnd}
+          onResponderTerminate={onEnd}
+          accessibilityLabel={`Reorder ${item.description}. Position ${index + 1} of ${count}`}
+          accessibilityHint="Drag to reorder. Or open the item and use Move up or Move down."
+          style={styles.handle}
+        >
+          <Icon name="drag" size={16} color={isDragging ? colors.primary : colors.textFaint} />
+        </View>
+      )}
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Open ${item.description}`}
-        accessibilityHint="Shows the full item with edit and delete actions"
-        onPress={onOpen}
+        accessibilityLabel={
+          selectionMode
+            ? selected
+              ? `Deselect ${item.description}`
+              : `Select ${item.description}`
+            : `Open ${item.description}`
+        }
+        accessibilityHint={
+          selectionMode ? undefined : 'Shows the full item with edit and delete actions'
+        }
+        accessibilityState={selectionMode ? { selected } : undefined}
+        onPress={selectionMode ? () => onToggleSelect(item.id) : onOpen}
         style={({ pressed }) => [styles.copy, { opacity: pressed ? 0.7 : 1 }]}
       >
         <Text variant="body" numberOfLines={1}>

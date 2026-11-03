@@ -135,7 +135,7 @@ export async function stageSharedImage(uri, mimeType) {
     try {
       const bytes = await source.bytes();
       dest.create({ overwrite: true, intermediates: true });
-      dest.write(bytes);
+      await dest.write(bytes);
       return dest.uri;
     } catch {
       return null;

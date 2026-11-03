@@ -61,7 +61,7 @@ export async function persistReceipt(sourceUri) {
     // is the documented fallback (same as the staging step).
     const bytes = await source.bytes();
     dest.create({ overwrite: true, intermediates: true });
-    dest.write(bytes);
+    await dest.write(bytes);
   }
   return `${RECEIPT_DIR}/${name}`;
 }
@@ -99,7 +99,7 @@ export async function writeReceiptBase64(base64, extension = '.jpg') {
   const name = `${createId()}${safeExtension}`;
   const file = new File(dir, name);
   file.create({ overwrite: true, intermediates: true });
-  file.write(base64, { encoding: 'base64' });
+  await file.write(base64, { encoding: 'base64' });
   if (!file.exists) throw new Error('The receipt image could not be saved.');
   return `${RECEIPT_DIR}/${name}`;
 }

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -101,6 +101,14 @@ export default function ReminderFormScreen() {
   // Cancel instead of vanishing silently — this modal has no native close.
   const dirtyRef = useRef(false);
   const savedRef = useRef(false);
+  const [saved, setSaved] = useState(false);
+  // `dirtyRef` keeps the handlers ref-only, but the router needs a rendered
+  // value to arm its departure guard, so the latch is mirrored in state.
+  const [dirty, setDirty] = useState(false);
+  const markDirty = useCallback(() => {
+    dirtyRef.current = true;
+    setDirty(true);
+  }, []);
   // Latches the moment the user picks a day themselves, so the parent-budget
   // default below can never overwrite a deliberate choice.
   const dateTouchedRef = useRef(false);
@@ -196,29 +204,33 @@ export default function ReminderFormScreen() {
 
   const leave = useCallback(() => {
     savedRef.current = true;
+    setSaved(true);
     resetLinkSearch();
     if (navigation.canGoBack()) router.back();
     else router.replace('/calendar');
   }, [navigation, resetLinkSearch]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
-      if (savedRef.current || !dirtyRef.current) return;
-      event.preventDefault();
-      Alert.alert('Discard changes?', 'This reminder has not been saved yet.', [
-        { text: 'Keep editing', style: 'cancel' },
-        {
-          text: 'Discard',
-          style: 'destructive',
-          onPress: () => {
-            savedRef.current = true;
-            navigation.dispatch(event.data.action);
-          },
+  // SDK 58 removed the navigator's `beforeRemove` event. This guard holds an
+  // unsaved reminder on back gesture, hardware back or Cancel, and the saved
+  // paths (`leave`) let the original action through with `repeat`.
+  usePreventRemove(dirty && !saved, ({ repeat }) => {
+    if (savedRef.current) {
+      repeat();
+      return;
+    }
+    Alert.alert('Discard changes?', 'This reminder has not been saved yet.', [
+      { text: 'Keep editing', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: () => {
+          savedRef.current = true;
+          setSaved(true);
+          repeat();
         },
-      ]);
-    });
-    return unsubscribe;
-  }, [navigation]);
+      },
+    ]);
+  });
 
   function requestLeave() {
     if (!dirtyRef.current || savedRef.current) {
@@ -232,18 +244,18 @@ export default function ReminderFormScreen() {
   }
 
   function handleChangeTime(next) {
-    dirtyRef.current = true;
+    markDirty();
     setTime(next);
   }
 
   function handleChangeNotes(next) {
-    dirtyRef.current = true;
+    markDirty();
     setNotes(next);
   }
 
   function handlePickDate(day) {
     dateTouchedRef.current = true;
-    dirtyRef.current = true;
+    markDirty();
     setDate(day);
   }
 
@@ -315,7 +327,7 @@ export default function ReminderFormScreen() {
   }
 
   function pickTransaction(transaction) {
-    dirtyRef.current = true;
+    markDirty();
     setTransactionId(transaction.id);
     setLinkedTransaction(transaction);
     setSearch('');
@@ -323,7 +335,7 @@ export default function ReminderFormScreen() {
   }
 
   function unlinkTransaction() {
-    dirtyRef.current = true;
+    markDirty();
     setTransactionId(null);
     setLinkedTransaction(null);
   }

@@ -3,6 +3,7 @@ import {
   Stack,
   useLocalSearchParams,
   useNavigation,
+  usePreventRemove,
 } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -35,6 +36,7 @@ import { TextField } from '../../components/ui/TextField';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { PendingReminders } from '../../components/reminders/PendingReminders';
 import { TransactionReminders } from '../../components/reminders/TransactionReminders';
+import { SelectionWrapper } from '../../components/selection/SelectionWrapper';
 import { useBudgetDetailStore } from '../../stores/budgetDetailStore';
 import { useReceiptImportStore } from '../../stores/receiptImportStore';
 import { useRemindersStore } from '../../stores/remindersStore';
@@ -526,6 +528,45 @@ export default function TransactionFormScreen() {
   const dateEditedRef = useRef(Boolean(imported?.date));
   const navigation = useNavigation();
 
+  // SDK 58 removed the navigator's `beforeRemove` event, so the auto-save
+  // departure hold moves to this router hook. The current snapshot is derived
+  // here (the effect below keeps the save closure, stored in the ref) so the
+  // guard re-arms on every edit without reading a ref during render.
+  const leaveHandlerRef = useRef(null);
+  const currentSnapshot = useMemo(() => {
+    if (!transactionId || !editing || hydratedFrom !== editing.id) return null;
+    return formSnapshot({
+      type,
+      paymentStatus,
+      amountMinor: toMinor(amount, currency),
+      tagId,
+      date,
+      dueDate,
+      description,
+      breakdownActive,
+      items,
+    });
+  }, [
+    transactionId,
+    editing,
+    hydratedFrom,
+    type,
+    paymentStatus,
+    amount,
+    currency,
+    tagId,
+    date,
+    dueDate,
+    description,
+    breakdownActive,
+    items,
+  ]);
+  const preventLeave =
+    currentSnapshot !== null && currentSnapshot !== snapshotOfRow(editing);
+  usePreventRemove(preventLeave, ({ repeat }) => {
+    leaveHandlerRef.current?.(repeat);
+  });
+
   useEffect(() => {
     loadTags();
   }, [loadTags]);
@@ -995,6 +1036,58 @@ export default function TransactionFormScreen() {
     });
   }
 
+  // Bulk selection actions. Both operate on ids, never indexes: the selection
+  // survives reordering and a single Undo restores the exact previous list.
+  function handleMoveSelected(ids, direction) {
+    const picked = new Set(ids);
+    if (picked.size === 0) return;
+    undoRef.current = null;
+    setItems((list) => {
+      const next = [...list];
+      // Walk in the direction of travel so a selected block shifts one slot
+      // without swallowing its own members.
+      if (direction < 0) {
+        for (let index = 1; index < next.length; index += 1) {
+          if (picked.has(next[index].id) && !picked.has(next[index - 1].id)) {
+            [next[index - 1], next[index]] = [next[index], next[index - 1]];
+          }
+        }
+      } else {
+        for (let index = next.length - 2; index >= 0; index -= 1) {
+          if (picked.has(next[index].id) && !picked.has(next[index + 1].id)) {
+            [next[index], next[index + 1]] = [next[index + 1], next[index]];
+          }
+        }
+      }
+      return next;
+    });
+  }
+
+  function handleDeleteSelected(ids) {
+    const picked = new Set(ids);
+    const removed = items.filter((item) => picked.has(item.id));
+    if (removed.length === 0) return;
+    const snapshot = items;
+    setItems((list) => list.filter((item) => !picked.has(item.id)));
+    if (removed.length === items.length) setBreakdownActive(false);
+    undoRef.current = () => {
+      setBreakdownActive(true);
+      setItems(snapshot);
+    };
+    showToast(
+      removed.length === 1 ? 'Item deleted' : `${removed.length} items deleted`,
+      'warning',
+      {
+        label: 'Undo',
+        icon: 'undo',
+        onPress: () => {
+          const run = undoRef.current;
+          if (run) run();
+        },
+      },
+    );
+  }
+
   // Transfers have no creation UI yet, but an existing one must stay editable.
   const typeOptions = useMemo(() => {
     if (!editing || TYPE_OPTIONS.some((option) => option.value === editing.type)) {
@@ -1091,6 +1184,8 @@ export default function TransactionFormScreen() {
   // After a save the store reloads the row, the snapshot re-derives equal to
   // it, listeners unsubscribe, and the scheduled router.back() leaves cleanly.
   useEffect(() => {
+    // A stored handler only belongs to the render that armed the guard.
+    leaveHandlerRef.current = null;
     if (!transactionId || !editing || hydratedFrom !== editing.id) return undefined;
 
     const fields = {
@@ -1161,6 +1256,10 @@ export default function TransactionFormScreen() {
       return savePromiseRef.current;
     }
 
+    // The action the blocked departure wanted to perform. `repeat` re-dispatches
+    // it once the write (and any period confirmation) has landed.
+    let leaveRepeat = null;
+
     function askPeriod() {
       const outside = periodStatus(date, budget, editing?.transaction_date);
       if (!outside) return;
@@ -1168,18 +1267,23 @@ export default function TransactionFormScreen() {
         ensureSave(true).then((outcome) => {
           const wasLeaving = leavePlannedRef.current;
           leavePlannedRef.current = false;
-          if (outcome === 'saved' && wasLeaving) router.back();
+          const repeat = leaveRepeat;
+          leaveRepeat = null;
+          if (outcome === 'saved' && wasLeaving) repeat?.();
         });
       });
     }
 
-    const beforeRemove = (event) => {
+    leaveHandlerRef.current = (repeat) => {
       // The save may already have landed (store reloaded or our own write):
       // treat that as clean and let this departure through untouched.
-      if (rowSnapshotRef.current !== null && snapshot === rowSnapshotRef.current) return;
-      event.preventDefault();
+      if (rowSnapshotRef.current !== null && snapshot === rowSnapshotRef.current) {
+        repeat();
+        return;
+      }
       if (leavePlannedRef.current) return; // a departure is already scheduled.
       leavePlannedRef.current = true;
+      leaveRepeat = repeat;
       ensureSave().then((outcome) => {
         if (outcome === 'confirm') {
           leavePlannedRef.current = false;
@@ -1187,7 +1291,9 @@ export default function TransactionFormScreen() {
           return;
         }
         leavePlannedRef.current = false;
-        if (outcome === 'saved') router.back();
+        const action = leaveRepeat;
+        leaveRepeat = null;
+        if (outcome === 'saved') action?.();
       });
     };
 
@@ -1201,10 +1307,9 @@ export default function TransactionFormScreen() {
       });
     };
 
-    const unsubscribeRemove = navigation.addListener('beforeRemove', beforeRemove);
     const unsubscribeBlur = navigation.addListener('blur', onBlur);
     return () => {
-      unsubscribeRemove();
+      leaveHandlerRef.current = null;
       unsubscribeBlur();
     };
   }, [
@@ -1344,6 +1449,36 @@ export default function TransactionFormScreen() {
   }
 
   return (
+    <SelectionWrapper
+      items={items}
+      idOf={(item) => item.id}
+      selectLabel="Select all breakdown items"
+      deselectLabel="Deselect all breakdown items"
+      actions={(selection) => [
+        {
+          label: 'Move up',
+          icon: 'chevronUp',
+          variant: 'secondary',
+          onPress: () => handleMoveSelected(selection.selectedIds, -1),
+        },
+        {
+          label: 'Move down',
+          icon: 'chevronDown',
+          variant: 'secondary',
+          onPress: () => handleMoveSelected(selection.selectedIds, 1),
+        },
+        {
+          label: 'Delete',
+          icon: 'trash',
+          variant: 'danger',
+          onPress: () => {
+            handleDeleteSelected(selection.selectedIds);
+            selection.exitSelection();
+          },
+        },
+      ]}
+    >
+      {(sel) => (
     <View style={styles.fill}>
       <Stack.Screen options={{ title: transactionId ? 'Edit Transaction' : 'Add Transaction' }} />
 
@@ -1352,7 +1487,8 @@ export default function TransactionFormScreen() {
           scrollEnabled={!breakdownDragging}
           contentContainerStyle={{
             paddingTop: spacing.md + cardHeight + spacing.xl,
-            paddingBottom: (transactionId ? 48 : barHeight) + keyboardHeight,
+            paddingBottom:
+              (sel.selectionMode ? 110 : transactionId ? 48 : barHeight) + keyboardHeight,
           }}
         >
         <SectionHeader title="Description" />
@@ -1481,6 +1617,7 @@ export default function TransactionFormScreen() {
             <SectionHeader
               title={items.length > 0 ? `Breakdown · ${items.length}` : 'Breakdown'}
               fontSize={14}
+              inlineAction={sel.masterRow}
               action={
                 <Pressable
                   accessibilityRole="button"
@@ -1502,6 +1639,9 @@ export default function TransactionFormScreen() {
               onOpenItem={(item) => setItemDetail(item)}
               onReorder={handleReorder}
               onDragStateChange={setBreakdownDragging}
+              selectionMode={sel.selectionMode}
+              isSelected={sel.isSelected}
+              onToggleSelect={sel.toggleItem}
             />
             {errors.breakdown ? (
               <Text variant="caption" tone="expense" style={{ marginTop: spacing.xs }}>
@@ -1954,7 +2094,15 @@ export default function TransactionFormScreen() {
         </View>
       </Card>
 
-      {transactionId ? null : (
+      {sel.selectionMode ? (
+        // The bulk bar takes the save button's place at the bottom of the
+        // scene: one primary action at a time while items are picked.
+        <View style={{ bottom: 0, left: 0, position: 'absolute', right: 0 }}>
+          {sel.toolbar}
+        </View>
+      ) : null}
+
+      {transactionId || sel.selectionMode ? null : (
         <View
           onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
           style={{
@@ -2021,6 +2169,8 @@ export default function TransactionFormScreen() {
         />
       ) : null}
     </View>
+      )}
+    </SelectionWrapper>
   );
 }
 

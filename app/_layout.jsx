@@ -32,7 +32,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  initialRouteName: "(tabs)",
+  anchor: "(tabs)",
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -237,7 +237,8 @@ function NavigationShell() {
         />
       </Stack>
       {/* Mounted above the navigator so a save toast survives the screen
-          closing: auto-save fires from beforeRemove, then the screen unmounts. */}
+          closing: auto-save fires from the departure guard, then the screen
+          unmounts. */}
       <ToastView />
       {/* Last sibling: the onboarding overlay paints over every screen,
           including the toast layer, for exactly as long as it is visible. */}

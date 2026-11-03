@@ -42,7 +42,7 @@ export async function saveContentToUserFile(content, fileName, mimeType = 'appli
   if (existing && !(existing instanceof Directory)) existing.delete();
 
   const file = directory.createFile(safeName, mimeType);
-  file.write(content);
+  await file.write(content);
   return { name: file.name || safeName, size: file.size };
 }
 
@@ -59,7 +59,7 @@ export async function shareContent(
   const safeName = String(fileName).replace(/[^A-Za-z0-9._-]/g, '-');
   const file = new File(Paths.cache, safeName);
   file.create({ overwrite: true });
-  file.write(content);
+  await file.write(content);
   if (!(await Sharing.isAvailableAsync())) {
     file.delete();
     throw new Error('No share target is available on this device.');

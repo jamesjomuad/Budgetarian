@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Multi-select for transaction breakdown items. A checkbox in the Breakdown
+  header switches the section into selection mode, where every item shows a
+  checkbox in place of its drag handle and a bottom bar can move the selected
+  items up or down or delete them together. A bulk delete offers one Undo, and
+  single-item editing, adding and drag reordering still behave as before.
 - Single-budget export center. A budget's options menu now opens an export
   screen offering five formats for that budget alone: a restorable Budgetarian
   JSON backup, an Excel workbook, a CSV of its transactions, an invoice PDF and
@@ -111,6 +116,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   allocation semantics are unchanged — an unpaid expense is still a
   recorded expense. Income due dates remain an expense-only feature, so
   unpaid income has no calendar payment event.
+- The app now runs on Expo SDK 58 with React Native 0.88 and React 19.3.
+  Screens, saved data and behaviour stay the same; the upgrade moves the
+  unsaved-changes guard on the budget, folder, reminder and transaction forms,
+  the opening route and receipt file writes onto the APIs this SDK requires.
 
 ### Fixed
 - Unselected options in Settings (Appearance and Currency) now stay completely
