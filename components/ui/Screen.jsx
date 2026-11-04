@@ -141,13 +141,16 @@ function Chevron({ collapsed, color }) {
  * the header stays visible (title and action remain) so a folded list is still
  * navigable. Pass `style` to override the default bottom margin when a section
  * needs tighter spacing. `inlineAction` rides inside the title group, right
- * beside the label: a touchable there (e.g. a checkbox) keeps its own press —
- * RN hands the responder to the inner control, so the fold never double-fires.
+ * after the label; `leadingAction` rides inside the same group but in front
+ * of it (a checkbox that should read before the heading). Either touchable
+ * keeps its own press — RN hands the responder to the inner control, so the
+ * fold never double-fires.
  */
 export function SectionHeader({
   title,
   action,
   inlineAction,
+  leadingAction,
   collapsed,
   onToggle,
   fontSize,
@@ -159,6 +162,7 @@ export function SectionHeader({
   const content = (
     <View style={[styles.sectionHeader, { marginBottom: spacing.sm }, style]}>
       <View style={styles.titleGroup}>
+        {leadingAction ?? null}
         {onToggle ? (
           <Chevron collapsed={collapsed} color={colors.text} />
         ) : null}

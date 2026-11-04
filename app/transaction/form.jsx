@@ -1452,6 +1452,7 @@ export default function TransactionFormScreen() {
     <SelectionWrapper
       items={items}
       idOf={(item) => item.id}
+      inlineMaster
       selectLabel="Select all breakdown items"
       deselectLabel="Deselect all breakdown items"
       actions={(selection) => [
@@ -1617,7 +1618,7 @@ export default function TransactionFormScreen() {
             <SectionHeader
               title={items.length > 0 ? `Breakdown · ${items.length}` : 'Breakdown'}
               fontSize={14}
-              inlineAction={sel.masterRow}
+              leadingAction={sel.masterRow}
               action={
                 <Pressable
                   accessibilityRole="button"

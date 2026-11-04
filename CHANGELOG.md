@@ -80,6 +80,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of a false success.
 
 ### Changed
+- The selection bar no longer breaks its actions onto an uneven second line.
+  Cancel and the selected count sit on one row, and the actions share the row
+  beneath them, so a transaction's Move up, Move down and Delete stay aligned
+  and evenly spaced at any phone width. Single- and two-action bars keep the
+  same shape with the actions splitting the row between them.
+- The Breakdown section's Select all checkbox now sits in front of the
+  section label instead of after it, and no longer draws a hairline under
+  itself, so the header reads as one plain row.
 - Remaining balance is now payment-status aware everywhere. Only a Paid
   expense actually subtracts money and only a Paid income actually adds it,
   so the remaining balance, account balances, total assets, budget spend, tag
