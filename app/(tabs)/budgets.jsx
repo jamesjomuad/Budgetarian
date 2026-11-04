@@ -850,7 +850,7 @@ export default function BudgetsScreen() {
                         subject, and a folded or empty "BUDGETS · 0" header
                         still tells the user where they are. The create entry
                         below it is the established empty-state affordance.
-                        The three-state select-all lives inline with the label
+                        The three-state select-all sits in front of the label
                         because it covers exactly this section's rows — and a
                         press on it is handled by the checkbox itself, not the
                         surrounding fold toggle. */}
@@ -859,7 +859,7 @@ export default function BudgetsScreen() {
                       fontSize={14}
                       collapsed={!budgetsOpen}
                       onToggle={() => setBudgetsOpen((open) => !open)}
-                      inlineAction={sel.masterRow}
+                      leadingAction={sel.masterRow}
                     />
                     {budgetsOpen ? (
                       <Card
@@ -958,7 +958,9 @@ const styles = StyleSheet.create({
   loading: { alignItems: "center", paddingVertical: 48 },
   searchBar: {
     alignItems: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    // Same outline every other field in the app uses, so the search reads as a
+    // field rather than a lone underline.
+    borderWidth: StyleSheet.hairlineWidth,
     borderStyle: "solid",
     flexDirection: "row",
     minHeight: 48,

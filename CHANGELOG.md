@@ -80,6 +80,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of a false success.
 
 ### Changed
+- The Budgets page search field now draws a full outline like every other
+  field in the app, instead of only an underline under it.
+- On the Budgets page, the Select all checkbox now sits in front of the
+  Budgets section label instead of after it, matching the Breakdown header.
 - The selection bar no longer breaks its actions onto an uneven second line.
   Cancel and the selected count sit on one row, and the actions share the row
   beneath them, so a transaction's Move up, Move down and Delete stay aligned
