@@ -164,6 +164,7 @@ const perfIndexesMigration = migrations.find((entry) => entry.version === 11);
 const budgetPositionMigration = migrations.find((entry) => entry.version === 12);
 const receiptPathMigration = migrations.find((entry) => entry.version === 13);
 const attachmentsMigration = migrations.find((entry) => entry.version === 14);
+const timeNotesMigration = migrations.find((entry) => entry.version === 16);
 for (const entry of migrations) {
   if (
     entry === paymentMigration ||
@@ -175,7 +176,8 @@ for (const entry of migrations) {
     entry === perfIndexesMigration ||
     entry === budgetPositionMigration ||
     entry === receiptPathMigration ||
-    entry === attachmentsMigration
+    entry === attachmentsMigration ||
+    entry === timeNotesMigration
   ) {
     continue;
   }
@@ -241,6 +243,9 @@ await adapter.runAsync(
    VALUES ('v4_legacy_item', 'v4_expense', 'Legacy item', 500, 0, '2026-10-05', '2026-10-05')`,
 );
 await attachmentsMigration.up(adapter);
+// Time and notes are ALTERs, so they have to follow the 014 rebuild — the
+// same order runMigrations() uses on a device.
+await timeNotesMigration.up(adapter);
 check(
   'migration 014 folds legacy receipt references into attachment rows',
   (await adapter.getFirstAsync(
@@ -396,6 +401,21 @@ check(
       .prepare(`PRAGMA table_info(transactions)`)
       .all()
       .some((column) => column.name === 'payment_due_date'),
+);
+check(
+  'transactions gained an optional time and notes',
+  ['time', 'notes'].every((column) => transactionColumns.includes(column)),
+  transactionColumns.join(','),
+);
+const preUpgradeTimeNotes = await adapter.getAllAsync(
+  `SELECT id, time, notes FROM transactions
+    WHERE id IN ('v4_expense', 'v4_income') ORDER BY id`,
+);
+check(
+  'rows written before the upgrade keep a null time and null notes',
+  preUpgradeTimeNotes.length === 2 &&
+    preUpgradeTimeNotes.every((row) => row.time === null && row.notes === null),
+  JSON.stringify(preUpgradeTimeNotes),
 );
 
 const subIndexes = db.prepare(`PRAGMA index_list(sub_transactions)`).all();
@@ -1895,6 +1915,83 @@ async function runScenario(store) {
   snapshot.statusBudgetArchivedSpent = (
     await store.listBudgets({ includeArchived: true })
   ).find((budget) => budget.id === 'p_status_budget')?.spent;
+
+  // --- time and notes ----------------------------------------------------
+  // Two rows share a date: one timed, one not, so same-date ordering (timed
+  // rows first, later time ahead, no time last) is compared on both engines.
+  // The untimed row is created earlier so the tie after a cleared time still
+  // resolves by created_at on both engines.
+  await store.insertBudget({
+    id: 'p_time_budget',
+    name: 'Time and Notes',
+    start_date: '2026-10-01',
+    end_date: '2026-10-31',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertTransaction({
+    id: 'p_timed_early',
+    budget_id: 'p_time_budget',
+    type: 'expense',
+    amount: 1_000,
+    tag_id: null,
+    account_id: null,
+    to_account_id: null,
+    description: 'Breakfast',
+    transaction_date: '2026-10-15',
+    time: '08:05',
+    notes: 'With Ana\nand Bo',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertTransaction({
+    id: 'p_timed_late',
+    budget_id: 'p_time_budget',
+    type: 'expense',
+    amount: 2_500,
+    tag_id: null,
+    account_id: null,
+    to_account_id: null,
+    description: 'Dinner',
+    transaction_date: '2026-10-15',
+    time: '19:40',
+    notes: null,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertTransaction({
+    id: 'p_no_time',
+    budget_id: 'p_time_budget',
+    type: 'expense',
+    amount: 500,
+    tag_id: null,
+    account_id: null,
+    to_account_id: null,
+    description: 'Bus fare',
+    transaction_date: '2026-10-15',
+    notes: 'No clock on this one',
+    created_at: '2026-10-05T00:00:00.000Z',
+    updated_at: '2026-10-05T00:00:00.000Z',
+  });
+  const timeOrder = async () =>
+    (await store.listTransactionsByBudget('p_time_budget')).map(
+      (row) => `${row.id}:${row.time ?? ''}`,
+    );
+  snapshot.timeNotesOrder = await timeOrder();
+  snapshot.timeNotesRow = await store.getTransaction('p_timed_early');
+  snapshot.timeNotesUntimed = await store.getTransaction('p_no_time');
+
+  // Clearing the time and rewriting the notes must leave every other field
+  // of the row exactly as it was.
+  await store.updateTransaction({
+    ...(await store.getTransaction('p_timed_early')),
+    time: null,
+    notes: 'Still multi-line\nafter the edit',
+    updated_at: STAMP,
+  });
+  snapshot.timeNotesAfterEdit = await store.getTransaction('p_timed_early');
+  snapshot.timeNotesOrderAfterClear = await timeOrder();
+
   await store.clearAllData();
 
   return stable(snapshot);
@@ -1915,6 +2012,40 @@ check(
   'both adapters report the same schema version',
   sqliteResult.schemaVersion === memoryResult.schemaVersion &&
     sqliteResult.schemaVersion === LATEST_VERSION,
+);
+check(
+  'same-date rows order by recorded time, then fall back to no time',
+  JSON.stringify(sqliteResult.timeNotesOrder) ===
+    '["p_timed_late:19:40","p_timed_early:08:05","p_no_time:"]',
+  JSON.stringify(sqliteResult.timeNotesOrder),
+);
+check(
+  'a transaction stores its time and its multi-line notes',
+  sqliteResult.timeNotesRow?.time === '08:05' &&
+    sqliteResult.timeNotesRow?.notes === 'With Ana\nand Bo',
+  JSON.stringify(sqliteResult.timeNotesRow),
+);
+check(
+  'a transaction saved without a time reads back as null',
+  sqliteResult.timeNotesUntimed?.time === null &&
+    sqliteResult.timeNotesUntimed?.notes === 'No clock on this one',
+  JSON.stringify(sqliteResult.timeNotesUntimed),
+);
+check(
+  'clearing the time keeps every other field and the multi-line notes',
+  sqliteResult.timeNotesAfterEdit?.time === null &&
+    sqliteResult.timeNotesAfterEdit?.notes === 'Still multi-line\nafter the edit' &&
+    sqliteResult.timeNotesAfterEdit?.amount === 1_000 &&
+    sqliteResult.timeNotesAfterEdit?.description === 'Breakfast' &&
+    sqliteResult.timeNotesAfterEdit?.type === 'expense' &&
+    sqliteResult.timeNotesAfterEdit?.transaction_date === '2026-10-15',
+  JSON.stringify(sqliteResult.timeNotesAfterEdit),
+);
+check(
+  'a cleared time sorts behind every timed row on that date',
+  JSON.stringify(sqliteResult.timeNotesOrderAfterClear) ===
+    '["p_timed_late:19:40","p_timed_early:","p_no_time:"]',
+  JSON.stringify(sqliteResult.timeNotesOrderAfterClear),
 );
 const parityBudget = sqliteResult.budgets.find((budget) => budget.id === 'p_budget');
 check(
@@ -2254,7 +2385,7 @@ await legacyAdapter.runAsync(
 // Exactly what runMigrations() does: apply only what is newer than user_version.
 const fromVersion = legacyDb.prepare('PRAGMA user_version').get().user_version;
 const pending = migrations.filter((entry) => entry.version > fromVersion);
-check('legacy database has fourteen pending migrations', pending.length === 14, String(pending.length));
+check('legacy database has fifteen pending migrations', pending.length === 15, String(pending.length));
 for (const entry of pending) {
   await entry.up(legacyAdapter);
 }
@@ -3179,6 +3310,8 @@ const fixtureSnapshot = {
       to_account_id: null,
       description: 'Weekly groceries',
       transaction_date: '2026-10-05',
+      time: '07:45',
+      notes: 'Weekly shop\nlist ready',
       payment_status: 'paid',
       has_breakdown: 1,
       payment_due_date: null,
@@ -3349,6 +3482,29 @@ check(
     roundTrip.data.folders[1].name === 'Business' &&
     roundTrip.data.budgets[0].folder_id === 'folder_1',
   JSON.stringify(roundTrip.data?.folders),
+);
+const roundTripTx1 = roundTrip.data?.transactions.find((row) => row.id === 'tx_1');
+const roundTripTx2 = roundTrip.data?.transactions.find((row) => row.id === 'tx_2');
+check(
+  'the round trip preserves transaction time and multi-line notes',
+  roundTrip.ok &&
+    roundTripTx1?.time === '07:45' &&
+    roundTripTx1?.notes === 'Weekly shop\nlist ready',
+  JSON.stringify(roundTripTx1),
+);
+check(
+  'a transaction with no recorded time stays null through a backup',
+  roundTrip.ok && roundTripTx2?.time === null && roundTripTx2?.notes === null,
+  JSON.stringify(roundTripTx2),
+);
+const badTimeBackup = dataClone((d) => {
+  d.transactions[0].time = '25:99';
+});
+check(
+  'a backup carrying an invalid transaction time is rejected',
+  badTimeBackup.ok === false &&
+    badTimeBackup.issues.some((issue) => issue.includes('invalid time')),
+  JSON.stringify(badTimeBackup.issues),
 );
 const noFolders = dataClone((d) => delete d.folders);
 check(
@@ -4045,6 +4201,8 @@ async function createTransferFixture(store) {
     to_account_id: null,
     description: 'Flights',
     transaction_date: '2026-10-05',
+    time: '19:40',
+    notes: 'Booked with\nmiles + cash',
     payment_status: 'unpaid',
     has_breakdown: 1,
     payment_due_date: '2026-10-20',
@@ -4201,6 +4359,26 @@ check(
 check(
   'the file carries no unrelated budget or tag',
   !transferText.includes('budget_other') && !transferText.includes('OtherTag'),
+);
+const transferExpenseRow = validatedTransfer.data?.transactions.find(
+  (row) => row.id === transferIds.expense,
+);
+const transferIncomeRow = validatedTransfer.data?.transactions.find(
+  (row) => row.id === transferIds.income,
+);
+check(
+  'the file preserves transaction time and multi-line notes',
+  validatedTransfer.ok === true &&
+    transferExpenseRow?.time === '19:40' &&
+    transferExpenseRow?.notes === 'Booked with\nmiles + cash',
+  JSON.stringify(transferExpenseRow),
+);
+check(
+  'a transaction with no recorded time stays null in a budget file',
+  validatedTransfer.ok === true &&
+    transferIncomeRow?.time === null &&
+    transferIncomeRow?.notes === null,
+  JSON.stringify(transferIncomeRow),
 );
 
 // 3. File names and duplicate budget names stay readable.
@@ -4604,13 +4782,20 @@ check(
 const csv = buildCsvModel(exportSnapshot);
 check(
   'CSV has one header and one row per transaction',
-  csv.columns.length === 9 && csv.rows.length === 2 && csv.count === 2,
+  csv.columns.length === 11 && csv.rows.length === 2 && csv.count === 2,
   JSON.stringify({ columns: csv.columns.length, rows: csv.count }),
 );
 check('CSV begins with a UTF-8 BOM and uses CRLF', csv.text.charCodeAt(0) === 0xfeff && csv.text.includes('\r\n'));
 check(
   'CSV writes formatted amounts as plain numbers',
-  csv.rows.some((row) => row[1] === 'Flights' && row[5] === '50.00' && row[6] === 'PHP'),
+  csv.rows.some((row) => row[2] === 'Flights' && row[6] === '50.00' && row[7] === 'PHP'),
+  JSON.stringify(csv.rows[0]),
+);
+check(
+  'CSV carries the recorded time and the multi-line notes',
+  csv.columns.some((column) => column.key === 'time') &&
+    csv.columns.some((column) => column.key === 'notes') &&
+    csv.rows.some((row) => row[1] === '19:40' && row[10] === 'Booked with\nmiles + cash'),
   JSON.stringify(csv.rows[0]),
 );
 const trickySource = {
@@ -4660,7 +4845,16 @@ check(
 );
 check(
   'workbook amounts stay numeric instead of formatted text',
-  workbook.sheets[1].rows.every((row) => row[7].kind === 'money' && typeof row[7].value === 'number'),
+  workbook.sheets[1].rows.every((row) => row[8].kind === 'money' && typeof row[8].value === 'number'),
+);
+check(
+  'the workbook carries the recorded time and the multi-line notes',
+  workbook.sheets[1].columns.some((column) => column.label === 'Time') &&
+    workbook.sheets[1].columns.some((column) => column.label === 'Notes') &&
+    workbook.sheets[1].rows.some(
+      (row) => row[2].value === '19:40' && row[11].value === 'Booked with\nmiles + cash',
+    ),
+  JSON.stringify(workbook.sheets[1].columns.map((column) => column.label)),
 );
 const xlsxBytes = buildXlsxBytes(workbook);
 const xlsxZip = readStoredZip(xlsxBytes);

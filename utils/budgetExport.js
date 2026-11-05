@@ -125,7 +125,7 @@ export function fingerprintValue(value) {
 }
 
 function sourceFingerprint(source, currency) {
-  const transactions = sortedRows(source.transactions ?? [], (row) => `${row.transaction_date}|${row.created_at ?? ''}|${row.id}`);
+  const transactions = sortedRows(source.transactions ?? [], (row) => `${row.transaction_date}|${row.time ?? ''}|${row.created_at ?? ''}|${row.id}`);
   const items = sortedRows(source.breakdownItems ?? [], (row) => `${row.transaction_id}|${row.position ?? 0}|${row.id}`);
   const tags = sortedRows(source.tags ?? [], (row) => row.id);
   const reminders = sortedRows(source.reminders ?? [], (row) => `${row.remind_date}|${row.remind_time}|${row.id}`);
@@ -149,6 +149,8 @@ function sourceFingerprint(source, currency) {
       transaction_date: row.transaction_date,
       payment_status: row.payment_status ?? null,
       payment_due_date: row.payment_due_date ?? null,
+      time: row.time ?? null,
+      notes: row.notes ?? null,
       has_breakdown: row.has_breakdown ?? 0,
       updated_at: row.updated_at ?? null,
     })),
@@ -204,7 +206,7 @@ export function buildBudgetSnapshot(source, options = {}) {
 
   const transactions = sortedRows(
     source.transactions ?? [],
-    (row) => `${row.transaction_date}|${row.created_at ?? ''}|${row.id}`,
+    (row) => `${row.transaction_date}|${row.time ?? ''}|${row.created_at ?? ''}|${row.id}`,
   ).map((row, index) => ({
     ...row,
     reference: reference(index, 'TXN'),
@@ -315,6 +317,7 @@ function csvCell(value) {
 export function buildCsvModel(snapshot) {
   const columns = [
     { key: 'date', label: 'Date' },
+    { key: 'time', label: 'Time' },
     { key: 'description', label: 'Description' },
     { key: 'type', label: 'Type' },
     { key: 'tag', label: 'Category' },
@@ -323,10 +326,12 @@ export function buildCsvModel(snapshot) {
     { key: 'currency', label: 'Currency' },
     { key: 'breakdown', label: 'Breakdown items' },
     { key: 'reference', label: 'Reference' },
+    { key: 'notes', label: 'Notes' },
   ];
 
   const rows = snapshot.transactions.map((row) => [
     row.transaction_date,
+    row.time ?? '',
     guardSpreadsheetText(row.description),
     row.type === 'income' ? 'Income' : 'Expense',
     guardSpreadsheetText(row.tag?.name ?? ''),
@@ -335,6 +340,7 @@ export function buildCsvModel(snapshot) {
     snapshot.currencyMeta.code,
     row.breakdownItems.length,
     row.reference,
+    guardSpreadsheetText(row.notes ?? ''),
   ]);
 
   const lines = [columns.map((column) => csvCell(column.label)).join(',')];
@@ -376,6 +382,7 @@ export function buildWorkbookModel(snapshot) {
   const transactionRows = snapshot.transactions.map((row) => [
     cell(row.reference),
     cell(row.transaction_date),
+    cell(row.time ?? ''),
     cell(row.description),
     cell(row.type === 'income' ? 'Income' : 'Expense'),
     cell(row.tag?.name ?? ''),
@@ -384,6 +391,7 @@ export function buildWorkbookModel(snapshot) {
     cell(Number(plainAmount(row.amount, snapshot.currency)), 'money'),
     cell(snapshot.currencyMeta.code),
     cell(row.breakdownItems.length),
+    cell(row.notes ?? ''),
   ]);
 
   const itemRows = snapshot.breakdownItems.map((row) => {
@@ -444,6 +452,7 @@ export function buildWorkbookModel(snapshot) {
         columns: [
           { label: 'Reference', width: 12 },
           { label: 'Date', width: 12 },
+          { label: 'Time', width: 8 },
           { label: 'Description', width: 34 },
           { label: 'Type', width: 10 },
           { label: 'Category', width: 18 },
@@ -452,6 +461,7 @@ export function buildWorkbookModel(snapshot) {
           { label: 'Amount', width: 14 },
           { label: 'Currency', width: 10 },
           { label: 'Breakdown items', width: 16 },
+          { label: 'Notes', width: 34 },
         ],
         rows: transactionRows,
         count: transactionRows.length,

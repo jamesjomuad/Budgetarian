@@ -83,9 +83,16 @@ export function createMemoryAdapter({ seedDemo = false } = {}) {
     a.created_at.localeCompare(b.created_at) ||
     a.id.localeCompare(b.id);
 
-  /** SQLite's `ORDER BY transaction_date DESC, created_at DESC`. */
+  /**
+   * SQLite's `ORDER BY transaction_date DESC, COALESCE(time, '') DESC,
+   * created_at DESC`: same day first, later time ahead, and a row with no
+   * time after every timed row on that day (all of them compare equal, so
+   * creation order still breaks those ties).
+   */
   const byTransactionDate = (a, b) =>
-    b.transaction_date.localeCompare(a.transaction_date) || b.created_at.localeCompare(a.created_at);
+    b.transaction_date.localeCompare(a.transaction_date) ||
+    String(b.time ?? '').localeCompare(String(a.time ?? '')) ||
+    b.created_at.localeCompare(a.created_at);
 
   /** SQLite's `ORDER BY name COLLATE NOCASE ASC`. */
   const byTagName = (a, b) => {
@@ -474,6 +481,8 @@ export function createMemoryAdapter({ seedDemo = false } = {}) {
         created_at: row.created_at,
         updated_at: row.updated_at,
         payment_due_date: row.payment_due_date ?? null,
+        time: row.time ?? null,
+        notes: row.notes ?? null,
       });
     },
 
@@ -488,6 +497,8 @@ export function createMemoryAdapter({ seedDemo = false } = {}) {
       existing.payment_status = row.payment_status ?? null;
       existing.has_breakdown = row.has_breakdown ? 1 : 0;
       existing.payment_due_date = row.payment_due_date ?? null;
+      existing.time = row.time ?? null;
+      existing.notes = row.notes ?? null;
       existing.updated_at = row.updated_at;
       return 1;
     },
@@ -900,6 +911,8 @@ export function createMemoryAdapter({ seedDemo = false } = {}) {
         payment_status: row.payment_status ?? null,
         has_breakdown: row.has_breakdown ? 1 : 0,
         payment_due_date: row.payment_due_date ?? null,
+        time: row.time ?? null,
+        notes: row.notes ?? null,
         created_at: row.created_at,
         updated_at: row.updated_at,
       });
@@ -1065,6 +1078,8 @@ function seedDemoData(store, timestamp) {
     has_breakdown: 0,
     created_at: timestamp,
     updated_at: timestamp,
+    time: null,
+    notes: null,
   });
   store.reminders.push({
     id: 'demo_reminder_bill',
@@ -1114,6 +1129,8 @@ function seedDemoData(store, timestamp) {
       has_breakdown: 0,
       created_at: timestamp,
       updated_at: timestamp,
+      time: null,
+      notes: null,
     };
   }
 }

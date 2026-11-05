@@ -179,6 +179,8 @@ export function serializeBudgetTransfer(source, options = {}) {
       payment_status: row.payment_status ?? null,
       has_breakdown: row.has_breakdown ? 1 : 0,
       payment_due_date: row.payment_due_date ?? null,
+      time: row.time ?? null,
+      notes: row.notes ?? null,
       created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
     })),
@@ -441,6 +443,11 @@ export function validateBudgetTransfer(parsed) {
       issues.push(`Transaction "${id}" has an invalid payment due date.`);
       continue;
     }
+    const time = text(raw.time).trim() || null;
+    if (time != null && !isHhMm(time)) {
+      issues.push(`Transaction "${id}" has an invalid time.`);
+      continue;
+    }
 
     transactions.push({
       id,
@@ -452,6 +459,8 @@ export function validateBudgetTransfer(parsed) {
       payment_status: paymentStatus,
       has_breakdown: hasBreakdown ? 1 : 0,
       payment_due_date: dueDate,
+      time,
+      notes: text(raw.notes).trim() || null,
       created_at: text(raw.created_at) || nowStamp,
       updated_at: text(raw.updated_at) || nowStamp,
     });
@@ -794,6 +803,8 @@ export function planBudgetImport(validated, options = {}) {
       payment_status: row.payment_status,
       has_breakdown: row.has_breakdown,
       payment_due_date: row.payment_due_date,
+      time: row.time ?? null,
+      notes: row.notes ?? null,
       created_at: row.created_at ?? timestamp,
       updated_at: row.updated_at ?? timestamp,
     };

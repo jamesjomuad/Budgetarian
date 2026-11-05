@@ -65,6 +65,8 @@ const ENTITY_COLUMNS = {
     'payment_status',
     'has_breakdown',
     'payment_due_date',
+    'time',
+    'notes',
     'created_at',
     'updated_at',
   ],
@@ -460,6 +462,10 @@ export function validateBackup(parsed, { nowStamp = nowIso() } = {}) {
       issues.push(`${label} has an invalid due date ("${String(row.payment_due_date)}").`);
       continue;
     }
+    if (row.time != null && row.time !== '' && !isHhMm(row.time)) {
+      issues.push(`${label} has an invalid time ("${String(row.time)}").`);
+      continue;
+    }
     let paymentStatus = null;
     if (row.type === 'expense' || row.type === 'income') {
       paymentStatus = PAYMENT_STATUSES.includes(row.payment_status) ? row.payment_status : 'paid';
@@ -507,6 +513,8 @@ export function validateBackup(parsed, { nowStamp = nowIso() } = {}) {
       payment_status: paymentStatus,
       has_breakdown: hasBreakdown,
       payment_due_date: row.payment_due_date || null,
+      time: row.time || null,
+      notes: typeof row.notes === 'string' ? row.notes : null,
       // Receipt attachments are deliberately not carried over: the
       // `attachments` table is never exported and its image files live only
       // on this device, so a restored transaction can never reference a

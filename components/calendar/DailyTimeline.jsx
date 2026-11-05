@@ -42,9 +42,9 @@ const WEEKDAYS = [
 
 /**
  * The activities of the selected calendar day, newest state first in the
- * store but always rendered chronologically here. Transactions have no time
- * column in the database, so they are all-day rows that sort before timed
- * reminders; ties fall back to kind and id so identical timestamps keep every
+ * store but always rendered chronologically here. An entry with no recorded
+ * time is an all-day row and leads its date; timed entries follow by clock,
+ * with ties falling back to kind and id so identical timestamps keep every
  * record in a stable order.
  *
  * The month grid above this list never scrolls: the screen owns the fixed

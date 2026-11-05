@@ -314,11 +314,17 @@ export function createSqliteAdapter(getDb) {
 
     // --- transactions --------------------------------------------------
 
+    /**
+     * One budget's transactions, newest first. Same date first, then the
+     * recorded time (later time ahead), then creation order — a transaction
+     * with no time sorts after every timed row on that day, so a legacy row
+     * never lands between two timed ones.
+     */
     async listTransactionsByBudget(budgetId) {
       return query(
         `SELECT * FROM transactions
           WHERE budget_id = ?
-          ORDER BY transaction_date DESC, created_at DESC`,
+          ORDER BY transaction_date DESC, COALESCE(time, '') DESC, created_at DESC`,
         budgetId,
       );
     },
@@ -329,7 +335,7 @@ export function createSqliteAdapter(getDb) {
         `SELECT t.* FROM transactions t
            JOIN budgets b ON b.id = t.budget_id AND b.deleted_at IS NULL
           WHERE t.transaction_date >= ? AND t.transaction_date <= ?
-          ORDER BY t.transaction_date DESC, t.created_at DESC`,
+          ORDER BY t.transaction_date DESC, COALESCE(t.time, '') DESC, t.created_at DESC`,
         startIso,
         endIso,
       );
@@ -345,7 +351,7 @@ export function createSqliteAdapter(getDb) {
       return query(
         `SELECT t.* FROM transactions t
            JOIN budgets b ON b.id = t.budget_id AND b.deleted_at IS NULL
-          ORDER BY t.transaction_date DESC, t.created_at DESC
+          ORDER BY t.transaction_date DESC, COALESCE(t.time, '') DESC, t.created_at DESC
           LIMIT ?`,
         limit,
       );
@@ -377,7 +383,7 @@ export function createSqliteAdapter(getDb) {
              OR EXISTS (SELECT 1 FROM sub_transactions s
                          WHERE s.transaction_id = t.id
                            AND lower(s.description) LIKE ? ESCAPE '\\')
-          ORDER BY t.transaction_date DESC, t.created_at DESC
+          ORDER BY t.transaction_date DESC, COALESCE(t.time, '') DESC, t.created_at DESC
           LIMIT ?`,
         pattern,
         pattern,
@@ -395,8 +401,8 @@ export function createSqliteAdapter(getDb) {
         `INSERT INTO transactions
            (id, budget_id, type, amount, tag_id, account_id, to_account_id, description,
             transaction_date, payment_status, has_breakdown, payment_due_date,
-            created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            time, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         row.id,
         row.budget_id,
         row.type,
@@ -409,6 +415,8 @@ export function createSqliteAdapter(getDb) {
         row.payment_status ?? null,
         row.has_breakdown ? 1 : 0,
         row.payment_due_date ?? null,
+        row.time ?? null,
+        row.notes ?? null,
         row.created_at,
         row.updated_at,
       );
@@ -419,7 +427,7 @@ export function createSqliteAdapter(getDb) {
         `UPDATE transactions
             SET type = ?, amount = ?, tag_id = ?, description = ?,
                 transaction_date = ?, payment_status = ?, has_breakdown = ?,
-                payment_due_date = ?, updated_at = ?
+                payment_due_date = ?, time = ?, notes = ?, updated_at = ?
           WHERE id = ?`,
         row.type,
         row.amount,
@@ -429,6 +437,8 @@ export function createSqliteAdapter(getDb) {
         row.payment_status ?? null,
         row.has_breakdown ? 1 : 0,
         row.payment_due_date ?? null,
+        row.time ?? null,
+        row.notes ?? null,
         row.updated_at,
         row.id,
       );
@@ -920,7 +930,7 @@ export function createSqliteAdapter(getDb) {
             SET budget_id = ?, type = ?, amount = ?, tag_id = ?, account_id = ?,
                 to_account_id = ?, description = ?, transaction_date = ?,
                 payment_status = ?, has_breakdown = ?, payment_due_date = ?,
-                created_at = ?, updated_at = ?
+                time = ?, notes = ?, created_at = ?, updated_at = ?
           WHERE id = ?`,
         row.budget_id,
         row.type,
@@ -933,6 +943,8 @@ export function createSqliteAdapter(getDb) {
         row.payment_status ?? null,
         row.has_breakdown ? 1 : 0,
         row.payment_due_date ?? null,
+        row.time ?? null,
+        row.notes ?? null,
         row.created_at,
         row.updated_at,
         row.id,

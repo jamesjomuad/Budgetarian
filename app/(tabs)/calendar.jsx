@@ -23,11 +23,11 @@ import {
 const KIND_ORDER = { expense: 0, income: 1, reminder: 2 };
 
 /**
- * Chronological order for one day. Transactions are stored without a time, so
- * they are all-day entries and lead each date; timed reminders follow by
- * clock. Ties fall back to kind, then creation time, then id, so two records
- * with the same instant are always kept and never swap places between
- * renders.
+ * Chronological order for one day. An entry with no recorded time is an
+ * all-day row and leads its date; timed entries follow by clock, mixing
+ * reminders and time-stamped transactions. Ties fall back to kind, then
+ * creation time, then id, so two records with the same instant are always
+ * kept and never swap places between renders.
  */
 function compareActivities(a, b) {
   if (a.hasTime !== b.hasTime) return a.hasTime ? 1 : -1;
@@ -193,8 +193,8 @@ export default function CalendarScreen() {
         id: entry.id,
         transaction: entry,
         reminder: null,
-        hasTime: false,
-        time: null,
+        hasTime: Boolean(entry.time),
+        time: entry.time ?? null,
         createdAt: entry.created_at,
         title: entry.description || tag?.name || "Transaction",
         budgetName: entry.budget_name || null,

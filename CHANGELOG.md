@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Optional Time and Notes on transactions. A new transaction records the
+  current local time, which can be changed with the shared time picker or
+  cleared entirely; transactions saved before this existed keep no time at
+  all rather than an invented one. On the same date, timed transactions sort
+  ahead of untimed ones and later times lead. A separate multi-line Notes
+  field sits beside Description (which stays the short title), saved and
+  restored on edit with surrounding whitespace trimmed and line breaks kept.
+  Date and time show together in transaction lists, the Calendar timeline
+  (only when a time exists) and a reminder's linked-transaction line, and both
+  fields travel through backups, single-budget files and CSV/Excel exports.
 - Multi-select for transaction breakdown items. A checkbox in the Breakdown
   header switches the section into selection mode, where every item shows a
   checkbox in place of its drag handle and a bottom bar can move the selected

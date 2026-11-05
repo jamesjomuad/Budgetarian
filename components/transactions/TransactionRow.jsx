@@ -2,7 +2,7 @@ import { memo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { formatCurrency } from "../../utils/currency";
-import { dayLabel } from "../../utils/dates";
+import { dayLabel, formatTime } from "../../utils/dates";
 import { effectivePaymentStatus } from "../../utils/paymentStatus";
 import { formatPercent } from "../../utils/reports";
 import { Icon } from "../ui/Icon";
@@ -76,13 +76,18 @@ export const TransactionRow = memo(function TransactionRow({
   const metaText = [paymentLabel, shareLabel].filter(Boolean).join(" · ");
 
   // A reminder and a breakdown count ride on the second line: they are the
-  // only extra markers a transaction can carry.
+  // only extra markers a transaction can carry. A recorded time joins the
+  // day; a transaction with none (every row saved before time existed) keeps
+  // the plain day label rather than borrowing an invented one.
   const hasReminder = transaction.reminder?.enabled === 1;
+  const dayText = transaction.time
+    ? `${dayLabel(transaction.transaction_date)} · ${formatTime(transaction.time)}`
+    : dayLabel(transaction.transaction_date);
   const subtitleParts =
     transaction.type === "transfer"
-      ? [dayLabel(transaction.transaction_date)]
+      ? [dayText]
       : [
-          dayLabel(transaction.transaction_date),
+          dayText,
           hasReminder ? "🔔" : null,
           itemCount > 0 ? `${itemCount} item${itemCount === 1 ? '' : 's'}` : null,
         ];

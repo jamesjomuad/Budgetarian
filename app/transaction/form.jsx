@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { DatePicker } from '../../components/dates/DatePicker';
+import { TimePicker } from '../../components/dates/TimePicker';
 import { AmountInput } from '../../components/ui/AmountInput';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -45,10 +46,16 @@ import { useTagsStore } from '../../stores/tagsStore';
 import { BreakdownSection } from '../../components/transactions/BreakdownSection';
 import { SubTransactionDetailSheet } from '../../components/transactions/SubTransactionDetailSheet';
 import { SubTransactionSheet } from '../../components/transactions/SubTransactionSheet';
-import { computeBreakdownTotal } from '../../utils/breakdown';
+import { computeBreakdownTotal, isHhMm } from '../../utils/breakdown';
 import { isHexColor, resolveFolderPalette } from '../../utils/colors';
 import { formatCurrency, fromMinor, getCurrency, toMinor } from '../../utils/currency';
-import { formatDateRange, formatShortDate, parseFlexibleDate, toIsoDate } from '../../utils/dates';
+import {
+  formatDateRange,
+  formatShortDate,
+  nowTime,
+  parseFlexibleDate,
+  toIsoDate,
+} from '../../utils/dates';
 import { createId } from '../../utils/id';
 import { PAYMENT_OPTIONS, effectivePaymentStatus } from '../../utils/paymentStatus';
 import { showToast } from '../../stores/toastStore';
@@ -167,11 +174,13 @@ function formSnapshot(values) {
       : values.amountMinor,
     tagId: values.tagId || null,
     date: values.date,
+    time: values.time || null,
     dueDate:
       values.type === 'expense' && values.paymentStatus === 'unpaid'
         ? values.dueDate || null
         : null,
     description: values.description?.trim() ? values.description.trim() : null,
+    notes: values.notes?.trim() ? values.notes.trim() : null,
     breakdown: breakdownSnapshot(values.breakdownActive, values.items),
   });
 }
@@ -184,8 +193,10 @@ function snapshotOfRow(row) {
     amountMinor: row.amount,
     tagId: row.tag_id,
     date: row.transaction_date,
+    time: row.time ?? null,
     dueDate: row.payment_due_date ?? null,
     description: row.description,
+    notes: row.notes ?? null,
     breakdownActive: row.has_breakdown === 1,
     items: row.subTransactions ?? [],
   });
@@ -241,6 +252,9 @@ function validateFields(f, currency) {
   }
   if (f.type !== 'transfer' && !f.tagId) nextErrors.tag = 'Choose a tag.';
   if (!resolvedDate) nextErrors.date = 'Pick a date.';
+  // The picker only ever emits 'HH:mm'; this guards a restored draft or a
+  // future caller rather than a normal tap.
+  if (f.time && !isHhMm(f.time)) nextErrors.time = 'Pick a valid time.';
   return nextErrors;
 }
 
@@ -272,7 +286,9 @@ function buildPayload(f, currency) {
       : toMinor(f.amount, currency),
     tagId: f.tagId,
     description: f.description.trim() || null,
+    notes: f.notes.trim() || null,
     date: parseFlexibleDate(f.date),
+    time: f.time || null,
     paymentStatus: f.type === 'transfer' ? null : f.paymentStatus,
     paymentDueDate:
       f.type === 'expense' && f.paymentStatus === 'unpaid' ? f.dueDate || null : null,
@@ -477,6 +493,11 @@ export default function TransactionFormScreen() {
       : toIsoDate(new Date())),
   );
   const [description, setDescription] = useState(imported?.notes ?? '');
+  // Optional local wall-clock time, 'HH:mm'. A brand-new transaction starts
+  // at the current local time and the user can clear it; an edit keeps the
+  // stored value (including no time at all) until the field is touched.
+  const [time, setTime] = useState(() => (transactionId ? '' : nowTime()));
+  const [notes, setNotes] = useState('');
   const [pendingReminders, setPendingReminders] = useState([]);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -936,8 +957,10 @@ export default function TransactionFormScreen() {
     setAmount(String(fromMinor(editing.amount, currency)));
     setTagId(editing.tag_id ?? '');
     setDate(editing.transaction_date);
+    setTime(editing.time ?? '');
     setDueDate(editing.payment_due_date ?? '');
     setDescription(editing.description ?? '');
+    setNotes(editing.notes ?? '');
     setBreakdownActive(editing.has_breakdown === 1);
     setItems(
       (editing.subTransactions ?? []).map((item) => ({
@@ -1194,8 +1217,10 @@ export default function TransactionFormScreen() {
       amount,
       tagId,
       date,
+      time,
       dueDate,
       description,
+      notes,
       breakdownActive,
       items,
     };
@@ -1205,8 +1230,10 @@ export default function TransactionFormScreen() {
       amountMinor: toMinor(amount, currency),
       tagId,
       date,
+      time,
       dueDate,
       description,
+      notes,
       breakdownActive,
       items,
     });
@@ -1321,8 +1348,10 @@ export default function TransactionFormScreen() {
     amount,
     tagId,
     date,
+    time,
     dueDate,
     description,
+    notes,
     breakdownActive,
     items,
     currency,
@@ -1347,8 +1376,10 @@ export default function TransactionFormScreen() {
       amount,
       tagId,
       date,
+      time,
       dueDate,
       description,
+      notes,
       breakdownActive,
       items,
     };
@@ -1500,6 +1531,16 @@ export default function TransactionFormScreen() {
           returnKeyType="next"
         />
 
+        <SectionHeader title="Notes" />
+        <TextField
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Anything else worth remembering about this transaction"
+          multiline
+          numberOfLines={3}
+          inputStyle={{ textAlignVertical: 'top' }}
+        />
+
         <SectionHeader title="Transaction Date" />
         <DatePicker
           title="Transaction Date"
@@ -1531,6 +1572,31 @@ export default function TransactionFormScreen() {
             {formatShortDate(budget?.start_date)} – {formatShortDate(budget?.end_date)});
             saving it will ask you to confirm.
           </Text>
+        ) : null}
+
+        <SectionHeader title="Time" />
+        <TimePicker
+          title="Transaction Time"
+          value={time}
+          onChange={setTime}
+          placeholder="No time recorded"
+          error={errors.time}
+          style={{ marginBottom: time ? spacing.xs : spacing.lg }}
+        />
+        {time ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear time"
+            hitSlop={8}
+            onPress={() => setTime('')}
+            style={({ pressed }) => [
+              { alignSelf: 'flex-start', marginBottom: spacing.lg, opacity: pressed ? 0.55 : 1 },
+            ]}
+          >
+            <Text variant="label" tone="primary">
+              Clear time
+            </Text>
+          </Pressable>
         ) : null}
 
         <View style={{ height: spacing.lg }} />

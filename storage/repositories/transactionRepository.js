@@ -1,9 +1,11 @@
 import { storage } from '../adapters/adapter';
 import { createId, nowIso } from '../../utils/id';
 import { defaultPaymentStatus, effectivePaymentStatus } from '../../utils/paymentStatus';
+import { nowTime } from '../../utils/dates';
 import {
   breakdownValidationError,
   computeBreakdownTotal,
+  isHhMm,
   isIsoCalendarDate,
   normalizeBreakdownItems,
   prepareBreakdownRows,
@@ -97,6 +99,31 @@ function resolvePaymentDueDate(value) {
 }
 
 const SEARCH_RESULT_LIMIT = 30;
+
+/**
+ * Time-of-day rule: optional, local, and always 'HH:mm' — the same shape the
+ * reminder and breakdown time fields store. null, '' or undefined-to-null
+ * clears the recorded time; anything that is not a real clock time is
+ * rejected rather than silently dropped, so a malformed value can never
+ * reach the row.
+ */
+function resolveTime(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const text = String(value).trim();
+  if (!isHhMm(text)) {
+    throw new Error('Time must be a real clock time (HH:mm).');
+  }
+  return text;
+}
+
+/**
+ * Notes are optional free text: '' means none, and whitespace around the
+ * text is trimmed while line breaks inside it are left exactly as typed.
+ */
+function resolveNotes(value) {
+  if (value === null || value === undefined) return null;
+  return String(value).trim() || null;
+}
 
 /**
  * Payment status rules. Expenses and incomes carry one; transfers always
@@ -269,6 +296,10 @@ export async function createTransaction(input) {
       payment_status: resolveNewPaymentStatus(type, input.paymentStatus),
       has_breakdown: breakdown.hasBreakdown ? 1 : 0,
       payment_due_date: resolvePaymentDueDate(input.paymentDueDate),
+      // A new transaction records the local wall-clock time it was made
+      // unless the caller supplies one; a caller that clears it stores null.
+      time: input.time === undefined ? nowTime() : resolveTime(input.time),
+      notes: resolveNotes(input.notes),
       created_at: timestamp,
       updated_at: timestamp,
     },
@@ -291,6 +322,10 @@ export async function updateTransaction(id, input) {
     input.paymentDueDate === undefined
       ? existing.payment_due_date ?? null
       : resolvePaymentDueDate(input.paymentDueDate);
+  // Omitted on an edit means "keep what is stored": a transaction saved
+  // before time existed keeps its NULL until the user actually picks one.
+  const time = input.time === undefined ? existing.time ?? null : resolveTime(input.time);
+  const notes = input.notes === undefined ? existing.notes ?? null : resolveNotes(input.notes);
 
   const breakdown = await resolveBreakdown(type, existing, input);
 
@@ -323,6 +358,8 @@ export async function updateTransaction(id, input) {
       payment_status: resolveUpdatedPaymentStatus(type, existing, input),
       has_breakdown: breakdown.hasBreakdown ? 1 : 0,
       payment_due_date: paymentDueDate,
+      time,
+      notes,
       updated_at: timestamp,
     },
     // A metadata-only save (no breakdown mentioned) must not rewrite — or

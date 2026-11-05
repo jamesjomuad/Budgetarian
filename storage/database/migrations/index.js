@@ -13,6 +13,7 @@ import { migration as budgetPosition } from './012_budget_position';
 import { migration as receiptPath } from './013_receipt_path';
 import { migration as attachments } from './014_attachments';
 import { migration as budgetArchive } from './015_budget_archive';
+import { migration as transactionTimeNotes } from './016_transaction_time_notes';
 
 /**
  * Append-only list. Never edit a shipped migration — add a new one so existing
@@ -34,6 +35,7 @@ export const migrations = [
   receiptPath,
   attachments,
   budgetArchive,
+  transactionTimeNotes,
 ];
 
 export const LATEST_VERSION = migrations.reduce(

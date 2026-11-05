@@ -16,7 +16,7 @@ import { useBudgetsStore } from '../../stores/budgetsStore';
 import { useRemindersStore } from '../../stores/remindersStore';
 import { showToast } from '../../stores/toastStore';
 import { formatCurrency } from '../../utils/currency';
-import { formatDate, toIsoDate } from '../../utils/dates';
+import { formatDate, formatTime, toIsoDate } from '../../utils/dates';
 import {
   REMINDER_STATUS_LABELS,
   buildRemindAt,
@@ -416,7 +416,8 @@ export default function ReminderFormScreen() {
                 {linkedTransaction.description || 'Transaction'}
               </Text>
               <Text variant="caption" tone="muted">
-                {formatDate(linkedTransaction.transaction_date)} ·{' '}
+                {formatDate(linkedTransaction.transaction_date)}
+                {linkedTransaction.time ? ` · ${formatTime(linkedTransaction.time)}` : ''} ·{' '}
                 {formatCurrency(linkedTransaction.amount)}
               </Text>
             </View>
@@ -469,7 +470,8 @@ export default function ReminderFormScreen() {
                   </Text>
                   <Text variant="caption" tone="muted">
                     {transaction.budget_name ? `${transaction.budget_name} · ` : ''}
-                    {formatDate(transaction.transaction_date)} ·{' '}
+                    {formatDate(transaction.transaction_date)}
+                    {transaction.time ? ` · ${formatTime(transaction.time)}` : ''} ·{' '}
                     {formatCurrency(transaction.amount)}
                   </Text>
                 </View>
