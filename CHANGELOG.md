@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Clone for breakdown items. Each item's detail sheet offers Clone beside
+  Edit, which duplicates the item — description, amount, purchase date and
+  time, and notes — directly beneath the original with a new id, confirms the
+  copy briefly, and counts it in the parent total like any other item. The
+  original is left untouched, and the copy can be edited, moved or deleted on
+  its own.
 - Optional Time and Notes on transactions. A new transaction records the
   current local time, which can be changed with the shared time picker or
   cleared entirely; transactions saved before this existed keep no time at

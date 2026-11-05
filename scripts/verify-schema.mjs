@@ -32,6 +32,7 @@ import {
 } from '../utils/paymentStatus.js';
 import {
   breakdownValidationError,
+  cloneBreakdownItem,
   computeBreakdownTotal,
   isHhMm,
   isIsoCalendarDate,
@@ -2949,6 +2950,116 @@ check(
   'isIsoCalendarDate accepts real days only',
   isIsoCalendarDate('2026-02-28') && !isIsoCalendarDate('2026-02-30') && !isIsoCalendarDate('nope'),
 );
+
+const cloneStamp = { prefix: null };
+const cloneSource = [
+  {
+    id: 's_a',
+    description: 'Rice 5kg',
+    amount: 25_000,
+    purchase_date: '2026-10-08',
+    purchase_time: '09:15',
+    notes: 'from the market',
+  },
+  { id: 's_b', description: 'Oil', amount: 8_000, purchase_date: null, purchase_time: null, notes: null },
+];
+const cloneId = (prefix) => {
+  cloneStamp.prefix = prefix;
+  return `${prefix}_clone`;
+};
+const clonedList = cloneBreakdownItem(cloneSource, 's_a', cloneId);
+check(
+  'clone inserts a fresh copy directly after its original',
+  clonedList.length === 3 &&
+    clonedList[0].id === 's_a' &&
+    clonedList[1].id === 'subtx_clone' &&
+    clonedList[2].id === 's_b',
+  JSON.stringify(clonedList.map((item) => item.id)),
+);
+check(
+  'clone mints a subtx id and copies every user-entered field',
+  cloneStamp.prefix === 'subtx' &&
+    clonedList[1].description === 'Rice 5kg' &&
+    clonedList[1].amount === 25_000 &&
+    clonedList[1].purchase_date === '2026-10-08' &&
+    clonedList[1].purchase_time === '09:15' &&
+    clonedList[1].notes === 'from the market',
+  JSON.stringify(clonedList[1]),
+);
+check(
+  'clone leaves the original item and the input list untouched',
+  cloneSource.length === 2 &&
+    cloneSource[0].description === 'Rice 5kg' &&
+    cloneSource[0].amount === 25_000 &&
+    cloneSource[0].notes === 'from the market' &&
+    clonedList[0].description === 'Rice 5kg',
+);
+check(
+  'cloning an item with empty optional fields keeps them empty',
+  (() => {
+    const copy = cloneBreakdownItem(cloneSource, 's_b', cloneId)[1];
+    return (
+      copy.description === 'Oil' &&
+      copy.amount === 8_000 &&
+      copy.purchase_date === null &&
+      copy.purchase_time === null &&
+      copy.notes === null
+    );
+  })(),
+);
+check(
+  'the cloned amount is counted exactly once in the total',
+  computeBreakdownTotal(cloneSource) === 33_000 &&
+    computeBreakdownTotal(clonedList) === 58_000 &&
+    computeBreakdownTotal(clonedList) - computeBreakdownTotal(cloneSource) === 25_000,
+  String(computeBreakdownTotal(clonedList)),
+);
+const editedClone = clonedList.map((item) =>
+  item.id === 'subtx_clone' ? { ...item, description: 'Rice 5kg (copy)', amount: 1_000 } : item,
+);
+check(
+  'editing the clone never changes the original',
+  editedClone[1].description === 'Rice 5kg (copy)' &&
+    editedClone[1].amount === 1_000 &&
+    editedClone[0].description === 'Rice 5kg' &&
+    editedClone[0].amount === 25_000,
+);
+check(
+  'deleting the clone leaves the original in place',
+  editedClone.filter((item) => item.id !== 'subtx_clone').map((item) => item.id).join(',') ===
+    's_a,s_b',
+);
+check(
+  'cloning multiple items keeps every copy independently addressable',
+  (() => {
+    let next = cloneBreakdownItem(cloneSource, 's_a', cloneId);
+    next = cloneBreakdownItem(next, 's_a', (prefix) => `${prefix}_clone2`);
+    const ids = next.map((item) => item.id);
+    return next.length === 4 && new Set(ids).size === 4;
+  })(),
+);
+check(
+  'an unknown item id returns the list unchanged',
+  cloneBreakdownItem(cloneSource, 'missing', cloneId) === cloneSource,
+);
+check(
+  'cloned items persist as distinct rows with their own positions',
+  (() => {
+    const rows = prepareBreakdownRows(
+      normalizeBreakdownItems(cloneBreakdownItem(cloneSource, 's_a', cloneId)),
+      { createId: cloneId, timestamp: STAMP },
+    );
+    return (
+      rows.length === 3 &&
+      new Set(rows.map((row) => row.id)).size === 3 &&
+      rows.map((row) => row.position).join(',') === '0,1,2' &&
+      rows[0].id === 's_a' &&
+      rows[1].id === 'subtx_clone' &&
+      rows[1].description === 'Rice 5kg'
+    );
+  })(),
+);
+
 check(
   'isHhMm accepts 24-hour times only',
   isHhMm('09:15') && isHhMm('23:59') && !isHhMm('9:15') && !isHhMm('24:00'),

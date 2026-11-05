@@ -12,9 +12,10 @@ import { Button } from '../ui/Button';
  * Detail view for one breakdown item, opened by tapping its row. It shows
  * what the compact row truncates — the full description, the formatted
  * signed amount, the purchase date and time, and the notes when present —
- * and owns every action: Edit (same add/edit sheet), Delete (which raises
- * the Undo snackbar in the form), and the accessible Move up / Move down
- * pair that replaces pure drag-and-drop reordering.
+ * and owns every action: Edit (same add/edit sheet), Clone (duplicates the
+ * item in place with a fresh id), Delete (which raises the Undo snackbar in
+ * the form), and the accessible Move up / Move down pair that replaces pure
+ * drag-and-drop reordering.
  */
 export function SubTransactionDetailSheet({
   item,
@@ -22,6 +23,7 @@ export function SubTransactionDetailSheet({
   index,
   count,
   onEdit,
+  onClone,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -118,6 +120,18 @@ export function SubTransactionDetailSheet({
               onPress={() => {
                 onClose();
                 onEdit(item);
+              }}
+            />
+          </View>
+
+          <View style={{ marginTop: spacing.sm }}>
+            <Button
+              label="Clone"
+              icon="copy"
+              variant="secondary"
+              onPress={() => {
+                onClose();
+                onClone(item);
               }}
             />
           </View>

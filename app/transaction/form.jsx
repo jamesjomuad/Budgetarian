@@ -46,7 +46,7 @@ import { useTagsStore } from '../../stores/tagsStore';
 import { BreakdownSection } from '../../components/transactions/BreakdownSection';
 import { SubTransactionDetailSheet } from '../../components/transactions/SubTransactionDetailSheet';
 import { SubTransactionSheet } from '../../components/transactions/SubTransactionSheet';
-import { computeBreakdownTotal, isHhMm } from '../../utils/breakdown';
+import { cloneBreakdownItem, computeBreakdownTotal, isHhMm } from '../../utils/breakdown';
 import { isHexColor, resolveFolderPalette } from '../../utils/colors';
 import { formatCurrency, fromMinor, getCurrency, toMinor } from '../../utils/currency';
 import {
@@ -1017,6 +1017,19 @@ export default function TransactionFormScreen() {
     undoRef.current = null;
     setItems((list) => list.map((item) => (item.id === draft.id ? { ...item, ...draft } : item)));
     setItemSheet(null);
+  }
+
+  // Clone duplicates the tapped item directly beneath it with a fresh id and
+  // every user-entered field copied. Like add, edit and delete this is plain
+  // form state: the parent save writes the whole child set at once, so the
+  // copy persists with the transaction and the original is never modified.
+  // The id is minted before the update so a repeated updater cannot double it.
+  function handleCloneItem(original) {
+    const cloneId = createId('subtx');
+    undoRef.current = null;
+    setBreakdownActive(true);
+    setItems((list) => cloneBreakdownItem(list, original.id, () => cloneId));
+    showToast('Breakdown item cloned', 'success');
   }
 
   function handleDeleteItem(deleted) {
@@ -2221,6 +2234,7 @@ export default function TransactionFormScreen() {
           index={items.findIndex((entry) => entry.id === itemDetail.id)}
           count={items.length}
           onEdit={(item) => setItemSheet({ item })}
+          onClone={handleCloneItem}
           onDelete={handleDeleteItem}
           onMoveUp={(from) => handleReorder(from, from - 1)}
           onMoveDown={(from) => handleReorder(from, from + 1)}

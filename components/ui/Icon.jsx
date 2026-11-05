@@ -26,6 +26,7 @@ const ICONS = {
   search: { ios: 'magnifyingglass', android: 'search', web: 'search' },
   check: { ios: 'checkmark', android: 'check', web: 'check' },
   pencil: { ios: 'pencil', android: 'edit', web: 'edit' },
+  copy: { ios: 'doc.on.doc', android: 'content_copy', web: 'content_copy' },
   more: { ios: 'ellipsis', android: 'more_vert', web: 'more_vert' },
   food: { ios: 'fork.knife', android: 'restaurant', web: 'restaurant' },
   transportation: { ios: 'bus', android: 'directions_bus', web: 'directions_bus' },

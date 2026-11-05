@@ -86,6 +86,22 @@ export function breakdownValidationError(items) {
 }
 
 /**
+ * Duplicate one breakdown item in place: the copy keeps every user-entered
+ * field (description, amount, purchase date/time, notes and any future ones)
+ * but gets a fresh id and sits directly after its original. The original is
+ * never touched and the incoming list is never mutated, so the caller can
+ * pass its current state straight through. A missing id returns the list
+ * unchanged.
+ */
+export function cloneBreakdownItem(items, id, createId) {
+  const list = items ?? [];
+  const index = list.findIndex((item) => item.id === id);
+  if (index < 0) return list;
+  const copy = { ...list[index], id: createId('subtx') };
+  return [...list.slice(0, index + 1), copy, ...list.slice(index + 1)];
+}
+
+/**
  * Build the complete child set for storage from a validated, ordered item
  * list: stable ids (reuse the incoming one, mint a new one otherwise) and a
  * persisted 0-based position. Duplicate flows pass items without ids so every
