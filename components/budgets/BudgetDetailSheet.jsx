@@ -28,6 +28,7 @@ export function BudgetDetailSheet({
   busy = false,
   onOpen,
   onEdit,
+  onMove,
   onArchive,
   onRestore,
   onDelete,
@@ -178,6 +179,14 @@ export function BudgetDetailSheet({
                   icon="pencil"
                   variant="secondary"
                   onPress={() => run(onEdit)}
+                />
+              </View>
+              <View style={{ marginTop: spacing.sm }}>
+                <Button
+                  label="Move to folder"
+                  icon="folder"
+                  variant="secondary"
+                  onPress={() => run(onMove)}
                 />
               </View>
               <View style={{ marginTop: spacing.sm }}>

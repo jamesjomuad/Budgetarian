@@ -14,9 +14,27 @@ import { useTheme } from '../ui/ThemeProvider';
  * in stored position order; picking "No folder" returns a budget to the Home
  * root.
  */
-export function FolderPickerSheet({ folders = [], title = 'Move to folder', onPick, onClose }) {
+export function FolderPickerSheet({
+  folders = [],
+  title = 'Move to folder',
+  budgetName,
+  currentFolderId,
+  currentFolderName,
+  onPick,
+  onClose,
+}) {
   const { colors, radius, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const isSingleMove = currentFolderId !== undefined;
+  const showRoot = !isSingleMove || currentFolderId !== null;
+  const destinations = isSingleMove
+    ? folders.filter((folder) => folder.id !== currentFolderId)
+    : folders;
+  const currentFolder = folders.find((folder) => folder.id === currentFolderId) ?? null;
+  const currentLocation = currentFolderId == null
+    ? 'No folder (main list)'
+    : currentFolderName ?? currentFolder?.name ?? 'Unavailable folder';
+  const showCreateFolder = folders.length === 0 || (!showRoot && destinations.length === 0);
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
@@ -56,6 +74,17 @@ export function FolderPickerSheet({ folders = [], title = 'Move to folder', onPi
             </Pressable>
           </View>
 
+          {budgetName ? (
+            <View style={{ paddingBottom: spacing.md, paddingHorizontal: spacing.lg }}>
+              <Text variant="body" numberOfLines={1}>
+                {budgetName}
+              </Text>
+              <Text variant="caption" tone="muted">
+                Current folder: {currentLocation}
+              </Text>
+            </View>
+          ) : null}
+
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
@@ -64,13 +93,15 @@ export function FolderPickerSheet({ folders = [], title = 'Move to folder', onPi
               paddingHorizontal: spacing.lg,
             }}
           >
-            <FolderOptionRow
-              label="No folder"
-              caption="Returns to the Home list"
-              onPress={() => onPick?.(null)}
-              onClose={onClose}
-            />
-            {folders.map((folder) => (
+            {showRoot ? (
+              <FolderOptionRow
+                label="No folder"
+                caption="Returns to the Home list"
+                onPress={() => onPick?.(null)}
+                onClose={onClose}
+              />
+            ) : null}
+            {destinations.map((folder) => (
               <FolderOptionRow
                 key={folder.id}
                 label={folder.name}
@@ -79,19 +110,19 @@ export function FolderPickerSheet({ folders = [], title = 'Move to folder', onPi
                 onClose={onClose}
               />
             ))}
-            {folders.length === 0 ? (
-              <>
-                <Text variant="caption" tone="faint" style={{ paddingVertical: spacing.sm, textAlign: 'center' }}>
-                  No budget folders yet.
-                </Text>
-                <FolderOptionRow
-                  label="Create a new folder"
-                  caption="Opens the folder form"
-                  accessibilityLabel="Create a new folder"
-                  onPress={() => router.push('/folder/form')}
-                  onClose={onClose}
-                />
-              </>
+            {folders.length === 0 || (!showRoot && destinations.length === 0) ? (
+              <Text variant="caption" tone="faint" style={{ paddingVertical: spacing.sm, textAlign: 'center' }}>
+                {folders.length === 0 ? 'No budget folders yet.' : 'No other folders available.'}
+              </Text>
+            ) : null}
+            {showCreateFolder ? (
+              <FolderOptionRow
+                label="Create a new folder"
+                caption="Opens the folder form"
+                accessibilityLabel="Create a new folder"
+                onPress={() => router.push('/folder/form')}
+                onClose={onClose}
+              />
             ) : null}
           </ScrollView>
         </View>

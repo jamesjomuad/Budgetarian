@@ -13,7 +13,7 @@ import { useTheme } from '../ui/ThemeProvider';
  * it. Exporting and importing both close the sheet first: the file picker and
  * the error alert must not open while a Modal is still tearing down.
  */
-export function BudgetActionsSheet({ visible, budget, onDelete, onClose }) {
+export function BudgetActionsSheet({ visible, budget, onMove, onDelete, onClose }) {
   const { colors, radius, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const isBusy = useBudgetTransferStore((state) => state.isBusy);
@@ -97,6 +97,13 @@ export function BudgetActionsSheet({ visible, budget, onDelete, onClose }) {
                   router.push({ pathname: '/budget/form', params: { id: budget.id } }),
                 )
               }
+            />
+            <ActionRow
+              icon="folder"
+              label={budget.folder_id ? 'Move to another folder' : 'Move to folder'}
+              caption="The budget keeps all of its data"
+              disabled={isBusy}
+              onPress={() => run(() => onMove?.(budget))}
             />
             <ActionRow
               icon="trash"

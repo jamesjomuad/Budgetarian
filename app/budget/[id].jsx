@@ -924,9 +924,13 @@ export default function BudgetDetailScreen() {
       {folderPickerOpen ? (
         <FolderPickerSheet
           folders={folders}
+          budgetName={budget.name}
+          currentFolderId={budget.folder_id ?? null}
+          currentFolderName={budgetFolder?.name}
           onPick={async (pickedId) => {
             try {
               await moveToFolder(budget.id, pickedId);
+              await load(budgetId);
               const destination = folders.find((folder) => folder.id === pickedId);
               showToast(destination ? `Moved to ${destination.name}` : 'Moved to the main list');
             } catch (moveError) {
@@ -940,6 +944,7 @@ export default function BudgetDetailScreen() {
       <BudgetActionsSheet
         visible={actionsOpen}
         budget={budget}
+        onMove={() => setFolderPickerOpen(true)}
         onDelete={confirmDeleteBudget}
         onClose={() => setActionsOpen(false)}
       />

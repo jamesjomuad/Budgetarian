@@ -44,6 +44,7 @@ export default function FolderDetailScreen() {
   const togglePinned = useBudgetsStore((state) => state.togglePinned);
   const pinnedIds = useBudgetsStore((state) => state.pinnedIds);
   const reorderBudget = useBudgetsStore((state) => state.reorderBudget);
+  const moveToFolder = useBudgetsStore((state) => state.moveToFolder);
   const moveManyToFolder = useBudgetsStore((state) => state.moveManyToFolder);
   const archiveMany = useBudgetsStore((state) => state.archiveMany);
   const restoreMany = useBudgetsStore((state) => state.restoreMany);
@@ -204,6 +205,8 @@ export default function FolderDetailScreen() {
   // The budget whose details are shown while a selection is active. The
   // checkbox stays the only selection control; tapping the row opens this.
   const [detailBudget, setDetailBudget] = useState(null);
+  // A single row's Move action is independent of the checkbox selection.
+  const [moveBudget, setMoveBudget] = useState(null);
   const openBudgetDetail = useCallback(
     (budget) => setDetailBudget(budget),
     [setDetailBudget],
@@ -306,30 +309,44 @@ export default function FolderDetailScreen() {
       deselectLabel="Deselect all budgets"
     >
       {(sel) => {
-        function confirmBulkMove(targetFolderId) {
+        function confirmMove(targetFolderId) {
+          const singleBudget = moveBudget;
           const destination = targetFolderId
             ? folders.find((entry) => entry.id === targetFolderId)?.name ?? 'folder'
             : null;
-          const count = sel.selectedIds.length;
+          const count = singleBudget ? 1 : sel.selectedIds.length;
           Alert.alert(
-            `Move ${count} ${count === 1 ? 'budget' : 'budgets'}?`,
+            singleBudget
+              ? `Move ${singleBudget.name}?`
+              : `Move ${count} ${count === 1 ? 'budget' : 'budgets'}?`,
             destination
-              ? `They will appear under "${destination}" in Budgets. Nothing else about them changes.`
-              : 'They will return to the main budget list. Nothing else about them changes.',
+              ? `${singleBudget ? 'It' : 'They'} will appear under "${destination}" in Budgets. Nothing else about ${singleBudget ? 'it' : 'them'} changes.`
+              : `${singleBudget ? 'It' : 'They'} will return to the main budget list. Nothing else about ${singleBudget ? 'it' : 'them'} changes.`,
             [
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'Move',
                 onPress: async () => {
                   try {
-                    await moveManyToFolder(sel.selectedIds, targetFolderId);
+                    if (singleBudget) {
+                      await moveToFolder(singleBudget.id, targetFolderId);
+                    } else {
+                      await moveManyToFolder(sel.selectedIds, targetFolderId);
+                    }
+                    setMoveBudget(null);
                     sel.exitSelection();
                     showToast(
                       destination ? `Moved to ${destination}` : 'Moved to the main list',
                       'success',
                     );
                   } catch (error) {
-                    showToast(error?.message ?? 'Could not move the budgets.', 'error');
+                    showToast(
+                      error?.message ??
+                        (singleBudget
+                          ? 'Could not move the budget.'
+                          : 'Could not move the budgets.'),
+                      'error',
+                    );
                   }
                 },
               },
@@ -454,11 +471,22 @@ export default function FolderDetailScreen() {
                 exactly like the Budgets tab swaps its pinned strip. */}
             {sel.selectionMode ? sel.toolbar : <Fab onPress={openCreateBudget} accessibilityLabel="Create a new budget in this folder" />}
 
-            {pickerOpen ? (
+            {pickerOpen || moveBudget ? (
               <FolderPickerSheet
                 folders={folders}
-                onPick={(targetFolderId) => confirmBulkMove(targetFolderId)}
-                onClose={() => setPickerOpen(false)}
+                budgetName={moveBudget?.name}
+                currentFolderId={moveBudget ? moveBudget.folder_id ?? null : undefined}
+                currentFolderName={
+                  moveBudget
+                    ? folders.find((entry) => entry.id === moveBudget.folder_id)?.name ??
+                      folder?.name
+                    : undefined
+                }
+                onPick={(targetFolderId) => confirmMove(targetFolderId)}
+                onClose={() => {
+                  setPickerOpen(false);
+                  setMoveBudget(null);
+                }}
               />
             ) : null}
 
@@ -470,6 +498,7 @@ export default function FolderDetailScreen() {
               onEdit={(budget) =>
                 router.push({ pathname: '/budget/form', params: { id: budget.id } })
               }
+              onMove={(budget) => setTimeout(() => setMoveBudget(budget), 0)}
               onArchive={handleArchiveBudget}
             />
           </GestureHandlerRootView>

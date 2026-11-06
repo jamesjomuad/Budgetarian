@@ -1,5 +1,6 @@
 import { storage } from '../adapters/adapter';
 import { createId, nowIso } from '../../utils/id';
+import { moveBudgetToFolder } from './budgetFolderMoveRepository';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
@@ -109,20 +110,7 @@ export async function updateBudget(id, { name, startDate, endDate, color = null,
  * drag it wherever they like there.
  */
 export async function setBudgetFolder(id, folderId = null) {
-  const current = await storage.getBudget(id);
-  if (!current) throw new Error('That budget no longer exists.');
-
-  await storage.updateBudget({
-    id,
-    name: current.name,
-    start_date: current.start_date,
-    end_date: current.end_date,
-    color: current.color ?? null,
-    folder_id: await resolveFolderId(folderId),
-    updated_at: nowIso(),
-  });
-
-  return getBudget(id);
+  return moveBudgetToFolder(storage, id, folderId);
 }
 
 /**

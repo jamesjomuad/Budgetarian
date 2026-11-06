@@ -100,6 +100,7 @@ import {
   validateReportConfig,
 } from '../utils/budgetExport.js';
 import { moveTransactionToBudget } from '../storage/repositories/transactionMoveRepository.js';
+import { moveBudgetToFolder } from '../storage/repositories/budgetFolderMoveRepository.js';
 import { buildPdfBytes, measureText, wrapText } from '../utils/pdf.js';
 import { buildXlsxBytes } from '../utils/xlsx.js';
 
@@ -2330,10 +2331,379 @@ async function runMoveScenario(store) {
   result.activeDestinationIds = (await store.listBudgets()).map((row) => row.id);
   return stable(result);
 }
+/** Everything a folder move must leave untouched. */
+async function readBudgetMoveRecord(store, budgetId) {
+  const budgets = await store.listBudgets({ includeArchived: true });
+  const budget = budgets.find((row) => row.id === budgetId) ?? null;
+  const transactions = await store.listTransactionsByBudget(budgetId);
+  return {
+    budget,
+    listBudget: budget ? budgets.find((row) => row.id === budgetId) : null,
+    matchingBudgetCount: budgets.filter((row) => row.id === budgetId).length,
+    transactions,
+    breakdown: await store.listSubTransactionsByBudget(budgetId),
+    attachments: await store.listAttachmentsForParents(transactions.map((row) => row.id)),
+    reminders: await store.listRemindersForBudget(budgetId, { includeArchived: true }),
+    tags: await store.listTags({ includeArchived: true }),
+    folders: await store.listFolders(),
+    totals: computeTotals(transactions),
+  };
+}
+
+function withoutMoveFields(budget) {
+  if (!budget) return null;
+  const { folder_id: _folderId, updated_at: _updatedAt, ...rest } = budget;
+  return rest;
+}
+
+function movePreservesBudget(before, after) {
+  return (
+    JSON.stringify(stable(withoutMoveFields(before.budget))) ===
+      JSON.stringify(stable(withoutMoveFields(after.budget))) &&
+    JSON.stringify(stable(withoutMoveFields(before.listBudget))) ===
+      JSON.stringify(stable(withoutMoveFields(after.listBudget))) &&
+    before.matchingBudgetCount === 1 &&
+    after.matchingBudgetCount === 1 &&
+    before.budget?.id === after.budget?.id
+  );
+}
+
+function movePreservesRelated(before, after) {
+  return (
+    JSON.stringify(stable(before.transactions)) === JSON.stringify(stable(after.transactions)) &&
+    JSON.stringify(stable(before.breakdown)) === JSON.stringify(stable(after.breakdown)) &&
+    JSON.stringify(stable(before.attachments)) === JSON.stringify(stable(after.attachments)) &&
+    JSON.stringify(stable(before.reminders)) === JSON.stringify(stable(after.reminders)) &&
+    JSON.stringify(stable(before.tags)) === JSON.stringify(stable(after.tags))
+  );
+}
+
+function movePreservesFinancials(before, after) {
+  return (
+    JSON.stringify(stable(before.totals)) === JSON.stringify(stable(after.totals)) &&
+    before.listBudget?.spent === after.listBudget?.spent &&
+    before.listBudget?.income === after.listBudget?.income &&
+    before.listBudget?.transaction_count === after.listBudget?.transaction_count
+  );
+}
+
+function moveHasValidRelationships(record, destinationFolderId) {
+  const folderId = destinationFolderId ?? null;
+  const transactionIds = new Set(record.transactions.map((row) => row.id));
+  return (
+    record.matchingBudgetCount === 1 &&
+    (record.budget?.folder_id ?? null) === folderId &&
+    (folderId == null || record.folders.some((folder) => folder.id === folderId)) &&
+    record.transactions.every((row) => row.budget_id === record.budget?.id) &&
+    record.breakdown.every((row) => transactionIds.has(row.transaction_id)) &&
+    record.attachments.every((row) => transactionIds.has(row.transaction_id)) &&
+    record.reminders.every(
+      (row) => row.transaction_id == null || transactionIds.has(row.transaction_id),
+    )
+  );
+}
+
+async function rejectionMessage(run) {
+  try {
+    await run();
+    return null;
+  } catch (error) {
+    return error?.message ?? 'unknown error';
+  }
+}
+
+/** Budget-to-folder moves, run identically through SQLite and memory. */
+async function runBudgetMoveScenario(store) {
+  await store.insertFolder({
+    id: 'bm_folder_a',
+    name: 'Move A',
+    color: '#112233',
+    position: 0,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertFolder({
+    id: 'bm_folder_b',
+    name: 'Move B',
+    color: null,
+    position: 1,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertFolder({
+    id: 'bm_gone',
+    name: 'Deleted folder',
+    color: null,
+    position: 2,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertTag({
+    id: 'bm_tag',
+    name: 'Move tag',
+    emoji: '📦',
+    color: '#445566',
+    is_default: 0,
+    archived: 0,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+
+  await store.insertBudget({
+    id: 'bm_rich',
+    name: 'Rich move budget',
+    start_date: '2026-09-01',
+    end_date: '2026-12-31',
+    color: '#AABBCC',
+    folder_id: 'bm_folder_a',
+    position: 4,
+    created_at: '2026-08-01T00:00:00.000Z',
+    updated_at: STAMP,
+    deleted_at: null,
+  });
+  await store.insertBudget({
+    id: 'bm_empty',
+    name: 'Root move budget',
+    start_date: '2026-10-01',
+    end_date: '2026-10-31',
+    color: null,
+    folder_id: null,
+    position: 2,
+    created_at: STAMP,
+    updated_at: STAMP,
+    deleted_at: null,
+  });
+
+  const transactions = [
+    {
+      id: 'bm_expense',
+      type: 'expense',
+      amount: 12_345,
+      payment_status: 'paid',
+      has_breakdown: 1,
+      payment_due_date: null,
+      time: '18:45',
+      notes: 'Keep these notes\nand this line',
+    },
+    {
+      id: 'bm_income',
+      type: 'income',
+      amount: 50_000,
+      payment_status: 'paid',
+      has_breakdown: 0,
+      payment_due_date: null,
+      time: '08:10',
+      notes: null,
+    },
+    {
+      id: 'bm_unpaid',
+      type: 'expense',
+      amount: 2_000,
+      payment_status: 'unpaid',
+      has_breakdown: 0,
+      payment_due_date: '2026-10-20',
+      time: null,
+      notes: 'Expected later',
+    },
+  ];
+  for (const transaction of transactions) {
+    await store.insertTransaction({
+      ...transaction,
+      budget_id: 'bm_rich',
+      tag_id: 'bm_tag',
+      account_id: null,
+      to_account_id: null,
+      description: `Move ${transaction.type}`,
+      transaction_date: '2026-10-12',
+      created_at: STAMP,
+      updated_at: STAMP,
+    });
+  }
+  await store.insertSubTransaction({
+    id: 'bm_sub_one',
+    transaction_id: 'bm_expense',
+    description: 'First part',
+    amount: 12_000,
+    position: 0,
+    purchase_date: '2026-10-11',
+    purchase_time: '11:30',
+    notes: 'Child notes',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertSubTransaction({
+    id: 'bm_sub_two',
+    transaction_id: 'bm_expense',
+    description: 'Second part',
+    amount: 345,
+    position: 1,
+    purchase_date: '2026-10-12',
+    purchase_time: null,
+    notes: null,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertAttachment({
+    id: 'bm_attachment_one',
+    transaction_id: 'bm_expense',
+    path: 'receipts/budget-move-one.jpg',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertAttachment({
+    id: 'bm_attachment_two',
+    transaction_id: 'bm_expense',
+    path: 'receipts/budget-move-two.png',
+    created_at: '2026-10-06T01:00:00.000Z',
+    updated_at: STAMP,
+  });
+  await store.insertReminder({
+    id: 'bm_reminder_one',
+    transaction_id: 'bm_expense',
+    enabled: 1,
+    status: 'active',
+    remind_date: '2026-10-19',
+    remind_time: '09:00',
+    remind_at: '2026-10-19T09:00:00+08:00',
+    notification_id: 'budget-move-os-one',
+    notes: 'Keep this schedule',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertReminder({
+    id: 'bm_reminder_two',
+    transaction_id: 'bm_expense',
+    enabled: 0,
+    status: 'completed',
+    remind_date: '2026-10-21',
+    remind_time: '10:15',
+    remind_at: '2026-10-21T10:15:00+08:00',
+    notification_id: null,
+    notes: 'Keep this state too',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertBudget({
+    id: 'bm_archived',
+    name: 'Archived move budget',
+    start_date: '2026-10-01',
+    end_date: '2026-10-31',
+    color: '#999999',
+    folder_id: 'bm_folder_a',
+    position: 0,
+    created_at: STAMP,
+    updated_at: STAMP,
+    deleted_at: STAMP,
+  });
+  await store.deleteFolder('bm_gone');
+
+  function transition(label, before, after, destinationFolderId) {
+    return {
+      label,
+      destinationFolderId,
+      preservedBudget: movePreservesBudget(before, after),
+      preservedRelated: movePreservesRelated(before, after),
+      preservedTransactions:
+        JSON.stringify(stable(before.transactions)) === JSON.stringify(stable(after.transactions)),
+      preservedBreakdown:
+        JSON.stringify(stable(before.breakdown)) === JSON.stringify(stable(after.breakdown)),
+      preservedAttachments:
+        JSON.stringify(stable(before.attachments)) === JSON.stringify(stable(after.attachments)),
+      preservedReminders:
+        JSON.stringify(stable(before.reminders)) === JSON.stringify(stable(after.reminders)),
+      preservedTags: JSON.stringify(stable(before.tags)) === JSON.stringify(stable(after.tags)),
+      preservedFinancials: movePreservesFinancials(before, after),
+      validRelationships: moveHasValidRelationships(after, destinationFolderId),
+      folderId: after.budget?.folder_id ?? null,
+    };
+  }
+
+  const initial = await readBudgetMoveRecord(store, 'bm_rich');
+  await moveBudgetToFolder(store, 'bm_rich', 'bm_folder_b');
+  const inFolderB = await readBudgetMoveRecord(store, 'bm_rich');
+  await moveBudgetToFolder(store, 'bm_rich', null);
+  const atRoot = await readBudgetMoveRecord(store, 'bm_rich');
+  const sameRootMessage = await rejectionMessage(() =>
+    moveBudgetToFolder(store, 'bm_rich', null),
+  );
+  await moveBudgetToFolder(store, 'bm_rich', 'bm_folder_a');
+  const backInFolderA = await readBudgetMoveRecord(store, 'bm_rich');
+
+  const rootBudgetBefore = await readBudgetMoveRecord(store, 'bm_empty');
+  await moveBudgetToFolder(store, 'bm_empty', 'bm_folder_b');
+  const rootBudgetAfter = await readBudgetMoveRecord(store, 'bm_empty');
+
+  const sameFolderMessage = await rejectionMessage(() =>
+    moveBudgetToFolder(store, 'bm_rich', 'bm_folder_a'),
+  );
+  const missingSourceMessage = await rejectionMessage(() =>
+    moveBudgetToFolder(store, 'bm_missing', 'bm_folder_a'),
+  );
+  const missingFolderMessage = await rejectionMessage(() =>
+    moveBudgetToFolder(store, 'bm_empty', 'bm_gone'),
+  );
+
+  const archivedBefore = await readBudgetMoveRecord(store, 'bm_archived');
+  const archivedToFolderMessage = await rejectionMessage(() =>
+    moveBudgetToFolder(store, 'bm_archived', 'bm_folder_b'),
+  );
+  const archivedToRootMessage = await rejectionMessage(() =>
+    moveBudgetToFolder(store, 'bm_archived', null),
+  );
+  const archivedAfter = await readBudgetMoveRecord(store, 'bm_archived');
+
+  const cancelBefore = await readBudgetMoveRecord(store, 'bm_rich');
+  // Cancelling closes the picker without calling the repository.
+  const selectedFolderId = null;
+  if (selectedFolderId) await moveBudgetToFolder(store, 'bm_rich', selectedFolderId);
+  const cancelAfter = await readBudgetMoveRecord(store, 'bm_rich');
+
+  const beforeRollback = await readBudgetMoveRecord(store, 'bm_rich');
+  const originalUpdateBudget = store.updateBudget;
+  store.updateBudget = async (...args) => {
+    await originalUpdateBudget(...args);
+    throw new Error('forced budget move failure');
+  };
+  const rollbackMessage = await rejectionMessage(() =>
+    moveBudgetToFolder(store, 'bm_rich', 'bm_folder_b'),
+  );
+  store.updateBudget = originalUpdateBudget;
+  const afterRollback = await readBudgetMoveRecord(store, 'bm_rich');
+
+  return stable({
+    richId: initial.budget?.id ?? null,
+    moves: [
+      transition('folder to another folder', initial, inFolderB, 'bm_folder_b'),
+      transition('folder to root', inFolderB, atRoot, null),
+      transition('root to folder', atRoot, backInFolderA, 'bm_folder_a'),
+      transition('separate root budget to folder', rootBudgetBefore, rootBudgetAfter, 'bm_folder_b'),
+    ],
+    validations: {
+      sameFolderMessage,
+      sameRootMessage,
+      missingSourceMessage,
+      missingFolderMessage,
+      archivedToFolderMessage,
+      archivedToRootMessage,
+      archivedSourceUnchanged:
+        JSON.stringify(stable(archivedBefore)) === JSON.stringify(stable(archivedAfter)),
+      cancelPreservesData:
+        JSON.stringify(stable(cancelBefore)) === JSON.stringify(stable(cancelAfter)),
+      rollbackMessage,
+      rollbackRestoredEverything:
+        JSON.stringify(stable(beforeRollback)) === JSON.stringify(stable(afterRollback)),
+    },
+    richFinalFolder: afterRollback.budget?.folder_id ?? null,
+    emptyFinalFolder: rootBudgetAfter.budget?.folder_id ?? null,
+  });
+}
+
 const sqliteResult = await runScenario(createSqliteAdapter(async () => adapter));
 const memoryResult = await runScenario(createMemoryAdapter());
 const sqliteMoveResult = await runMoveScenario(createSqliteAdapter(async () => adapter));
 const memoryMoveResult = await runMoveScenario(createMemoryAdapter());
+const sqliteBudgetMoveResult = await runBudgetMoveScenario(createSqliteAdapter(async () => adapter));
+const memoryBudgetMoveResult = await runBudgetMoveScenario(createMemoryAdapter());
 
 const sqliteJson = JSON.stringify(sqliteResult, null, 2);
 const memoryJson = JSON.stringify(memoryResult, null, 2);
@@ -2414,6 +2784,105 @@ check(
     sqliteMoveResult.validations.rollbackRestoredEverything &&
     memoryMoveResult.validations.rollbackThrew &&
     memoryMoveResult.validations.rollbackRestoredEverything,
+);
+const sqliteBudgetMoveJson = JSON.stringify(sqliteBudgetMoveResult, null, 2);
+const memoryBudgetMoveJson = JSON.stringify(memoryBudgetMoveResult, null, 2);
+check(
+  'budget folder moves have SQLite and memory/web parity',
+  sqliteBudgetMoveJson === memoryBudgetMoveJson,
+  sqliteBudgetMoveJson === memoryBudgetMoveJson
+    ? ''
+    : `\n--- sqlite budget move ---\n${sqliteBudgetMoveJson}\n--- memory budget move ---\n${memoryBudgetMoveJson}`,
+);
+check(
+  'moving a budget preserves its original id',
+  sqliteBudgetMoveResult.richId === 'bm_rich',
+  String(sqliteBudgetMoveResult.richId),
+);
+for (const move of sqliteBudgetMoveResult.moves) {
+  check(
+    `moving a budget from ${move.label} reaches the right folder with valid relationships`,
+    move.folderId === move.destinationFolderId && move.validRelationships,
+    JSON.stringify(move),
+  );
+  check(
+    `moving a budget from ${move.label} preserves its metadata and settings`,
+    move.preservedBudget,
+    JSON.stringify(move),
+  );
+  check(
+    `moving a budget from ${move.label} preserves transactions`,
+    move.preservedTransactions,
+  );
+  check(
+    `moving a budget from ${move.label} preserves breakdown items`,
+    move.preservedBreakdown,
+  );
+  check(
+    `moving a budget from ${move.label} preserves tags and their associations`,
+    move.preservedTags,
+  );
+  check(
+    `moving a budget from ${move.label} preserves attachment references`,
+    move.preservedAttachments,
+  );
+  check(
+    `moving a budget from ${move.label} preserves reminders and notification schedules`,
+    move.preservedReminders,
+  );
+  check(
+    `moving a budget from ${move.label} leaves financial calculations unchanged`,
+    move.preservedFinancials,
+    JSON.stringify(move),
+  );
+}
+check(
+  'moving a budget to its current folder is rejected',
+  sqliteBudgetMoveResult.validations.sameFolderMessage === 'Choose a different destination.',
+  String(sqliteBudgetMoveResult.validations.sameFolderMessage),
+);
+check(
+  'moving a root-level budget to the root again is rejected',
+  sqliteBudgetMoveResult.validations.sameRootMessage === 'Choose a different destination.',
+  String(sqliteBudgetMoveResult.validations.sameRootMessage),
+);
+check(
+  'moving an archived budget is rejected for a folder and for root',
+  sqliteBudgetMoveResult.validations.archivedToFolderMessage ===
+    'Restore the budget before moving it.' &&
+    sqliteBudgetMoveResult.validations.archivedToRootMessage ===
+      'Restore the budget before moving it.' &&
+    sqliteBudgetMoveResult.validations.archivedSourceUnchanged,
+  JSON.stringify(sqliteBudgetMoveResult.validations),
+);
+check(
+  'moving a missing budget is rejected without creating a row',
+  sqliteBudgetMoveResult.validations.missingSourceMessage === 'That budget no longer exists.',
+  String(sqliteBudgetMoveResult.validations.missingSourceMessage),
+);
+check(
+  'moving into a deleted folder is rejected and its source stays put',
+  sqliteBudgetMoveResult.validations.missingFolderMessage ===
+    'That budget folder no longer exists.' &&
+    sqliteBudgetMoveResult.emptyFinalFolder === 'bm_folder_b',
+  JSON.stringify(sqliteBudgetMoveResult.validations),
+);
+check(
+  'cancelling a budget move leaves storage unchanged',
+  sqliteBudgetMoveResult.validations.cancelPreservesData,
+);
+check(
+  'a failed budget move rolls back safely on both adapters without inconsistent data',
+  sqliteBudgetMoveResult.validations.rollbackMessage === 'forced budget move failure' &&
+    sqliteBudgetMoveResult.validations.rollbackRestoredEverything &&
+    memoryBudgetMoveResult.validations.rollbackMessage === 'forced budget move failure' &&
+    memoryBudgetMoveResult.validations.rollbackRestoredEverything &&
+    sqliteBudgetMoveResult.richFinalFolder === 'bm_folder_a' &&
+    memoryBudgetMoveResult.richFinalFolder === 'bm_folder_a',
+  JSON.stringify({
+    sqlite: sqliteBudgetMoveResult.validations,
+    memory: memoryBudgetMoveResult.validations,
+  }),
 );
 check(
   'same-date rows order by recorded time, then fall back to no time',
