@@ -9,10 +9,12 @@ import {
   deleteTransaction,
   getSubTransactionsForBudget,
   getTransactionsForBudget,
+  moveTransactionToBudget,
   updateTransaction,
 } from '../storage/repositories/transactionRepository';
 import { applyReminder } from '../services/reminderService';
 import { deleteReceiptFile } from '../services/receiptFiles';
+import { useBudgetsStore } from './budgetsStore';
 import {
   collectUsedTagIds,
   computeTagExpenseBreakdown,
@@ -194,6 +196,18 @@ export const useBudgetDetailStore = create((set, get) => {
           : await applyReminder({ transaction, reminder: input.reminder });
       await get().load(get().budgetId);
       return { transaction, reminder };
+    },
+
+    moveTransaction: async (transactionId, destinationBudgetId) => {
+      const transaction = await moveTransactionToBudget(transactionId, destinationBudgetId);
+      // Re-read the open source and every budget card. Both derived totals and
+      // counts then reflect the move immediately; opening the destination
+      // detail reads its own updated rows from the repository as usual.
+      await Promise.all([
+        get().load(get().budgetId),
+        useBudgetsStore.getState().load(),
+      ]);
+      return transaction;
     },
 
     removeTransaction: async (transactionId) => {

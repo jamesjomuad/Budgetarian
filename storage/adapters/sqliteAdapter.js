@@ -445,6 +445,16 @@ export function createSqliteAdapter(getDb) {
       return result.changes ?? 0;
     },
 
+    /** Reassign only the parent budget; every other field and child stays put. */
+    async setTransactionBudget(id, budgetId) {
+      const result = await run(
+        'UPDATE transactions SET budget_id = ? WHERE id = ?',
+        budgetId,
+        id,
+      );
+      return result.changes ?? 0;
+    },
+
     async deleteTransaction(id) {
       // attachments cascade with the parent (mirrored manually in the
       // memory adapter); the files themselves are cleaned up by the store.

@@ -1,4 +1,5 @@
 import { storage } from '../adapters/adapter';
+import { moveTransactionToBudget as moveTransactionWithStore } from './transactionMoveRepository';
 import { createId, nowIso } from '../../utils/id';
 import { defaultPaymentStatus, effectivePaymentStatus } from '../../utils/paymentStatus';
 import { nowTime } from '../../utils/dates';
@@ -370,6 +371,14 @@ export async function updateTransaction(id, input) {
   });
 
   return storage.getTransaction(id);
+}
+
+/**
+ * The app's storage-backed entry point; the store-injected implementation is
+ * shared with the adapter parity and rollback verification.
+ */
+export async function moveTransactionToBudget(id, budgetId) {
+  return moveTransactionWithStore(storage, id, budgetId);
 }
 
 export async function deleteTransaction(id) {

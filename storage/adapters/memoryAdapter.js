@@ -503,6 +503,14 @@ export function createMemoryAdapter({ seedDemo = false } = {}) {
       return 1;
     },
 
+    /** Reassign only the parent budget; every other field and child stays put. */
+    async setTransactionBudget(id, budgetId) {
+      const existing = store.transactions.find((transaction) => transaction.id === id);
+      if (!existing) return 0;
+      existing.budget_id = budgetId;
+      return 1;
+    },
+
     /**
      * Mirrors `ON DELETE SET NULL` on reminders: the transaction goes, the
      * reminder survives as a standalone record. Mirrors `ON DELETE CASCADE`

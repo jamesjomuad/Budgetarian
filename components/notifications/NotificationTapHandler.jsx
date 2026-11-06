@@ -25,7 +25,8 @@ function isId(value) {
  *                            Budget detail — or the Calendar tab when there
  *                            is no Budget to land on
  *   "Remind Later" action  → snoozeReminder(id) — no navigation
- *   linked notification    → data.transactionId + data.budgetId → transaction form
+ *   linked notification    → transactionId resolves the live parent Budget;
+ *                            the scheduled payload's budgetId is the fallback
  *   standalone reminder    → data.reminderId only  → reminder form
  *
  * expo-notifications offers no headless JS for notification actions without
@@ -123,6 +124,29 @@ export function NotificationTapHandler() {
       return true;
     }
 
+    async function openLinkedTransaction(data) {
+      let budgetId = data.budgetId;
+      try {
+        // An already-armed notification still carries the budget id from when
+        // it was scheduled. Resolve the unchanged transaction id so a later
+        // move opens its current budget without touching the reminder or OS
+        // schedule; the payload remains a fallback if that read fails.
+        const transaction = await useRemindersStore
+          .getState()
+          .fetchTransaction(data.transactionId);
+        if (transaction) budgetId = transaction.budget_id;
+      } catch {
+        // Keep the original payload as a best-effort route on a read failure.
+      }
+      if (isId(budgetId)) {
+        router.push({
+          pathname: '/transaction/form',
+          params: { budgetId, transactionId: data.transactionId },
+        });
+      }
+      clearLastResponseAsync();
+    }
+
     function open(response) {
       const request = response?.notification?.request;
       const data = request?.content?.data;
@@ -140,11 +164,7 @@ export function NotificationTapHandler() {
       handledRef.current.add(bodyKey);
 
       if (isId(data.transactionId) && isId(data.budgetId)) {
-        router.push({
-          pathname: '/transaction/form',
-          params: { budgetId: data.budgetId, transactionId: data.transactionId },
-        });
-        clearLastResponseAsync();
+        void openLinkedTransaction(data);
         return;
       }
       if (isId(data.reminderId)) {

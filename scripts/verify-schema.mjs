@@ -99,6 +99,7 @@ import {
   validateInvoiceConfig,
   validateReportConfig,
 } from '../utils/budgetExport.js';
+import { moveTransactionToBudget } from '../storage/repositories/transactionMoveRepository.js';
 import { buildPdfBytes, measureText, wrapText } from '../utils/pdf.js';
 import { buildXlsxBytes } from '../utils/xlsx.js';
 
@@ -1998,8 +1999,341 @@ async function runScenario(store) {
   return stable(snapshot);
 }
 
+async function seedMoveBudget(store, id, name, folderId = null) {
+  await store.insertBudget({
+    id,
+    folder_id: folderId,
+    name,
+    start_date: '2026-10-01',
+    end_date: '2026-10-31',
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+}
+
+/** Full record snapshot used to prove a move never rebuilds related rows. */
+async function readMoveRecord(store, transactionId, sourceId, destinationId) {
+  const budgets = await store.listBudgets({ includeArchived: true });
+  return {
+    transaction: await store.getTransaction(transactionId),
+    sourceTransactions: await store.listTransactionsByBudget(sourceId),
+    destinationTransactions: await store.listTransactionsByBudget(destinationId),
+    sourceBudget: budgets.find((row) => row.id === sourceId),
+    destinationBudget: budgets.find((row) => row.id === destinationId),
+    breakdown: await store.listSubTransactionsByParent(transactionId),
+    sourceBreakdown: await store.listSubTransactionsByBudget(sourceId),
+    destinationBreakdown: await store.listSubTransactionsByBudget(destinationId),
+    attachments: await store.listAttachmentsByTransaction(transactionId),
+    reminders: await store.listRemindersForTransaction(transactionId, { includeArchived: true }),
+    sourceReminders: await store.listRemindersForBudget(sourceId, { includeArchived: true }),
+    destinationReminders: await store.listRemindersForBudget(destinationId, {
+      includeArchived: true,
+    }),
+  };
+}
+
+/** The exact repository move operation, run against each storage engine. */
+async function runMoveScenario(store) {
+  await store.insertFolder({
+    id: 'm_folder',
+    name: 'Travel',
+    color: null,
+    position: 0,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertTag({
+    id: 'm_tag',
+    name: 'Moved tag',
+    emoji: '🧾',
+    color: '#123456',
+    is_default: 0,
+    archived: 0,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertAccount({
+    id: 'm_account',
+    name: 'Cash',
+    type: 'cash',
+    initial_balance: 0,
+    archived: 0,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertAccount({
+    id: 'm_account_to',
+    name: 'Bank',
+    type: 'bank',
+    initial_balance: 0,
+    archived: 0,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await store.insertBudget({
+    id: 'm_archived',
+    name: 'Archived destination',
+    start_date: '2026-10-01',
+    end_date: '2026-10-31',
+    deleted_at: STAMP,
+    created_at: STAMP,
+    updated_at: STAMP,
+  });
+  await seedMoveBudget(store, 'm_deleted_destination', 'Deleted destination');
+  await store.deleteBudget('m_deleted_destination');
+
+  const cases = [
+    { key: 'expensePaid', type: 'expense', status: 'paid', amount: 12_345 },
+    { key: 'expenseUnpaid', type: 'expense', status: 'unpaid', amount: 2_345 },
+    { key: 'incomePaid', type: 'income', status: 'paid', amount: 50_000 },
+    { key: 'incomeUnpaid', type: 'income', status: 'unpaid', amount: 30_000 },
+    { key: 'transfer', type: 'transfer', status: null, amount: 7_500 },
+  ];
+  const result = { cases: {}, validations: {} };
+
+  for (const testCase of cases) {
+    const sourceId = `m_${testCase.key}_source`;
+    const destinationId = `m_${testCase.key}_destination`;
+    const transactionId = `m_${testCase.key}_transaction`;
+    await seedMoveBudget(store, sourceId, `${testCase.key} source`);
+    // One destination lives inside a folder; the others cover root budgets.
+    await seedMoveBudget(
+      store,
+      destinationId,
+      `${testCase.key} destination`,
+      testCase.key === 'expensePaid' ? 'm_folder' : null,
+    );
+    await store.insertTransaction({
+      id: transactionId,
+      budget_id: sourceId,
+      type: testCase.type,
+      amount: testCase.amount,
+      tag_id: testCase.type === 'transfer' ? null : 'm_tag',
+      account_id: 'm_account',
+      to_account_id: testCase.type === 'transfer' ? 'm_account_to' : null,
+      description: `${testCase.key} description`,
+      transaction_date: '2026-10-12',
+      payment_status: testCase.status,
+      has_breakdown: testCase.key === 'expensePaid' ? 1 : 0,
+      payment_due_date: testCase.status === 'unpaid' ? '2026-10-20' : null,
+      time: '18:45',
+      notes: `Notes for ${testCase.key}\nSecond line`,
+      created_at: STAMP,
+      updated_at: '2026-10-06T02:00:00.000Z',
+    });
+
+    if (testCase.key === 'expensePaid') {
+      await store.insertSubTransaction({
+        id: 'm_sub_one',
+        transaction_id: transactionId,
+        description: 'First part',
+        amount: 12_000,
+        position: 0,
+        purchase_date: '2026-10-11',
+        purchase_time: '11:30',
+        notes: 'Child notes',
+        created_at: STAMP,
+        updated_at: STAMP,
+      });
+      await store.insertSubTransaction({
+        id: 'm_sub_two',
+        transaction_id: transactionId,
+        description: 'Second part',
+        amount: 345,
+        position: 1,
+        purchase_date: '2026-10-12',
+        purchase_time: null,
+        notes: null,
+        created_at: STAMP,
+        updated_at: STAMP,
+      });
+      await store.insertAttachment({
+        id: 'm_attachment_one',
+        transaction_id: transactionId,
+        path: 'receipts/move-one.jpg',
+        created_at: STAMP,
+        updated_at: STAMP,
+      });
+      await store.insertAttachment({
+        id: 'm_attachment_two',
+        transaction_id: transactionId,
+        path: 'receipts/move-two.png',
+        created_at: '2026-10-06T01:00:00.000Z',
+        updated_at: STAMP,
+      });
+      await store.insertReminder({
+        id: 'm_reminder_one',
+        transaction_id: transactionId,
+        enabled: 1,
+        status: 'active',
+        remind_date: '2026-10-19',
+        remind_time: '09:00',
+        remind_at: '2026-10-19T09:00:00+08:00',
+        notification_id: 'move-os-one',
+        notes: 'Keep this schedule',
+        created_at: STAMP,
+        updated_at: STAMP,
+      });
+      await store.insertReminder({
+        id: 'm_reminder_two',
+        transaction_id: transactionId,
+        enabled: 0,
+        status: 'completed',
+        remind_date: '2026-10-21',
+        remind_time: '10:15',
+        remind_at: '2026-10-21T10:15:00+08:00',
+        notification_id: null,
+        notes: 'Keep this state too',
+        created_at: STAMP,
+        updated_at: STAMP,
+      });
+    }
+
+    const before = await readMoveRecord(store, transactionId, sourceId, destinationId);
+    const tagBefore = await store.getTag('m_tag');
+    const moved = await moveTransactionToBudget(store, transactionId, destinationId);
+    const after = await readMoveRecord(store, transactionId, sourceId, destinationId);
+    const sourceTotals = computeTotals(after.sourceTransactions);
+    const destinationTotals = computeTotals(after.destinationTransactions);
+    const expectedTotals = computeTotals([before.transaction]);
+    const reminderFields = (rows) =>
+      rows.map(({ budget_id: _budgetId, ...row }) => row);
+    const breakdownTotal = after.breakdown.reduce((sum, row) => sum + row.amount, 0);
+
+    result.cases[testCase.key] = {
+      moved,
+      originalIdRetained: moved.id === transactionId && after.transaction.id === transactionId,
+      parentPreserved:
+        JSON.stringify(stable(after.transaction)) ===
+        JSON.stringify(stable({ ...before.transaction, budget_id: destinationId })),
+      sourceEmpty: after.sourceTransactions.length === 0,
+      destinationExactlyOne:
+        after.destinationTransactions.length === 1 &&
+        after.destinationTransactions[0].id === transactionId,
+      financial:
+        after.sourceBudget.spent === 0 &&
+        after.sourceBudget.income === 0 &&
+        after.sourceBudget.transaction_count === 0 &&
+        after.destinationBudget.spent === expectedTotals.expense &&
+        after.destinationBudget.income === expectedTotals.income &&
+        after.destinationBudget.transaction_count === 1 &&
+        sourceTotals.expense === 0 &&
+        sourceTotals.income === 0 &&
+        sourceTotals.transactionCount === 0 &&
+        destinationTotals.expense === expectedTotals.expense &&
+        destinationTotals.income === expectedTotals.income &&
+        destinationTotals.expectedExpense === expectedTotals.expectedExpense &&
+        destinationTotals.expectedIncome === expectedTotals.expectedIncome &&
+        destinationTotals.transactionCount === 1,
+      tagPreserved: JSON.stringify(stable(await store.getTag('m_tag'))) === JSON.stringify(stable(tagBefore)),
+      relatedPreserved:
+        JSON.stringify(stable(after.breakdown)) === JSON.stringify(stable(before.breakdown)) &&
+        JSON.stringify(stable(after.attachments)) === JSON.stringify(stable(before.attachments)) &&
+        JSON.stringify(stable(reminderFields(after.reminders))) ===
+          JSON.stringify(stable(reminderFields(before.reminders))),
+      relatedFollowedParent:
+        after.sourceBreakdown.length === 0 &&
+        after.destinationBreakdown.length === before.breakdown.length &&
+        after.sourceReminders.length === 0 &&
+        after.destinationReminders.length === before.reminders.length &&
+        after.destinationReminders.every((row) => row.budget_id === destinationId),
+      breakdownTotalUnchanged:
+        testCase.key !== 'expensePaid' ||
+        (after.transaction.amount === before.transaction.amount && breakdownTotal === 12_345),
+      reminderStateUnchanged:
+        testCase.key !== 'expensePaid' ||
+        (after.reminders[0].notification_id === 'move-os-one' &&
+          after.reminders[0].remind_at === '2026-10-19T09:00:00+08:00' &&
+          after.reminders[1].status === 'completed' &&
+          after.reminders[1].enabled === 0),
+      attachmentPathsUnchanged:
+        testCase.key !== 'expensePaid' ||
+        after.attachments.map((row) => row.path).join(',') ===
+          'receipts/move-one.jpg,receipts/move-two.png',
+      after,
+    };
+  }
+
+  const validationId = 'm_expensePaid_transaction';
+  const validationDestination = 'm_expensePaid_destination';
+  const beforeValidation = await readMoveRecord(
+    store,
+    validationId,
+    'm_expensePaid_source',
+    validationDestination,
+  );
+  async function rejected(destinationId) {
+    try {
+      await moveTransactionToBudget(store, validationId, destinationId);
+      return false;
+    } catch {
+      return true;
+    }
+  }
+  result.validations.sameBudget = await rejected(validationDestination);
+  result.validations.archivedBudget = await rejected('m_archived');
+  result.validations.missingBudget = await rejected('m_deleted_destination');
+  result.validations.missingSelection = await rejected(null);
+  const afterValidation = await readMoveRecord(
+    store,
+    validationId,
+    'm_expensePaid_source',
+    validationDestination,
+  );
+  result.validations.rejectionsPreserveData =
+    JSON.stringify(stable(beforeValidation)) === JSON.stringify(stable(afterValidation));
+
+  // Cancelling means no selected destination and no repository call at all.
+  const beforeCancel = await readMoveRecord(
+    store,
+    validationId,
+    'm_expensePaid_source',
+    validationDestination,
+  );
+  const selectedDestination = null;
+  if (selectedDestination) {
+    await moveTransactionToBudget(store, validationId, selectedDestination);
+  }
+  const afterCancel = await readMoveRecord(
+    store,
+    validationId,
+    'm_expensePaid_source',
+    validationDestination,
+  );
+  result.validations.cancelPreservesData =
+    JSON.stringify(stable(beforeCancel)) === JSON.stringify(stable(afterCancel));
+
+  // Force a failure after the parent update to prove the transaction journal
+  // restores the old parent and leaves every relationship exactly as it was.
+  const beforeRollback = await readMoveRecord(
+    store,
+    validationId,
+    'm_expensePaid_source',
+    validationDestination,
+  );
+  const originalSetTransactionBudget = store.setTransactionBudget;
+  store.setTransactionBudget = async (...args) => {
+    await originalSetTransactionBudget(...args);
+    throw new Error('forced move failure');
+  };
+  result.validations.rollbackThrew = await rejected('m_expensePaid_source');
+  store.setTransactionBudget = originalSetTransactionBudget;
+  const afterRollback = await readMoveRecord(
+    store,
+    validationId,
+    'm_expensePaid_source',
+    validationDestination,
+  );
+  result.validations.rollbackRestoredEverything =
+    JSON.stringify(stable(beforeRollback)) === JSON.stringify(stable(afterRollback));
+
+  result.activeDestinationIds = (await store.listBudgets()).map((row) => row.id);
+  return stable(result);
+}
 const sqliteResult = await runScenario(createSqliteAdapter(async () => adapter));
 const memoryResult = await runScenario(createMemoryAdapter());
+const sqliteMoveResult = await runMoveScenario(createSqliteAdapter(async () => adapter));
+const memoryMoveResult = await runMoveScenario(createMemoryAdapter());
 
 const sqliteJson = JSON.stringify(sqliteResult, null, 2);
 const memoryJson = JSON.stringify(memoryResult, null, 2);
@@ -2013,6 +2347,73 @@ check(
   'both adapters report the same schema version',
   sqliteResult.schemaVersion === memoryResult.schemaVersion &&
     sqliteResult.schemaVersion === LATEST_VERSION,
+);
+
+const sqliteMoveJson = JSON.stringify(sqliteMoveResult, null, 2);
+const memoryMoveJson = JSON.stringify(memoryMoveResult, null, 2);
+check(
+  'transaction moves have SQLite and memory/web parity',
+  sqliteMoveJson === memoryMoveJson,
+  sqliteMoveJson === memoryMoveJson
+    ? ''
+    : `\n--- sqlite move ---\n${sqliteMoveJson}\n--- memory move ---\n${memoryMoveJson}`,
+);
+check(
+  'move destinations include folder and root budgets but not archived budgets',
+  sqliteMoveResult.activeDestinationIds.includes('m_expensePaid_destination') &&
+    sqliteMoveResult.activeDestinationIds.includes('m_incomePaid_destination') &&
+    !sqliteMoveResult.activeDestinationIds.includes('m_archived'),
+);
+for (const [key, moveCase] of Object.entries(sqliteMoveResult.cases)) {
+  check(
+    `moving ${key} retains the original transaction and every parent field`,
+    moveCase.originalIdRetained && moveCase.parentPreserved && moveCase.tagPreserved,
+    JSON.stringify(moveCase.moved),
+  );
+  check(
+    `moving ${key} leaves the source and creates exactly one destination entry`,
+    moveCase.sourceEmpty && moveCase.destinationExactlyOne,
+  );
+  check(
+    `moving ${key} recalculates both budgets with the shared payment rules`,
+    moveCase.financial,
+    JSON.stringify({
+      source: moveCase.after.sourceBudget,
+      destination: moveCase.after.destinationBudget,
+    }),
+  );
+}
+const richMove = sqliteMoveResult.cases.expensePaid;
+check(
+  'moving a breakdown preserves its child ids, ordering and calculated total',
+  richMove.relatedPreserved && richMove.relatedFollowedParent && richMove.breakdownTotalUnchanged,
+  JSON.stringify(richMove.after.breakdown),
+);
+check(
+  'moving receipts preserves both attachment rows and their file paths',
+  richMove.relatedPreserved && richMove.attachmentPathsUnchanged,
+  JSON.stringify(richMove.after.attachments),
+);
+check(
+  'moving reminders preserves their ids, schedules, states and notification ids',
+  richMove.relatedPreserved && richMove.relatedFollowedParent && richMove.reminderStateUnchanged,
+  JSON.stringify(richMove.after.reminders),
+);
+check('moving to the same budget is rejected', sqliteMoveResult.validations.sameBudget);
+check('moving to an archived budget is rejected', sqliteMoveResult.validations.archivedBudget);
+check('moving to a deleted or missing budget is rejected', sqliteMoveResult.validations.missingBudget);
+check('moving requires a selected destination', sqliteMoveResult.validations.missingSelection);
+check(
+  'rejected moves leave the transaction and all related records unchanged',
+  sqliteMoveResult.validations.rejectionsPreserveData,
+);
+check('cancelling a move leaves storage unchanged', sqliteMoveResult.validations.cancelPreservesData);
+check(
+  'a failed move rolls back safely on both adapters',
+  sqliteMoveResult.validations.rollbackThrew &&
+    sqliteMoveResult.validations.rollbackRestoredEverything &&
+    memoryMoveResult.validations.rollbackThrew &&
+    memoryMoveResult.validations.rollbackRestoredEverything,
 );
 check(
   'same-date rows order by recorded time, then fall back to no time',

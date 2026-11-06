@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Move transactions between budgets. A transaction row's swipe actions now
+  place Move between Delete and Paid/Unpaid, opening a picker that identifies
+  the entry and its current budget and lists only other active budgets, with
+  folder names to tell
+  similar budgets apart. Confirming keeps the same transaction, breakdown,
+  tags, notes, payment state, receipts and reminders intact while both budgets
+  refresh their totals; cancelling changes nothing. Previously scheduled
+  reminder taps also resolve the transaction's current budget without
+  rescheduling the notification.
 - Details drawers for checkbox rows. While a selection is active, tapping a
   budget row — on the Budgets tab, inside a folder, or in the Archive — now
   opens a sheet with that budget's balance, period and spent total plus the

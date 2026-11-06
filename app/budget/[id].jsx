@@ -14,6 +14,7 @@ import { BudgetActionsSheet } from '../../components/budgets/BudgetActionsSheet'
 import { BudgetImportSheet } from '../../components/budgets/BudgetImportSheet';
 import { FolderPickerSheet } from '../../components/budgets/FolderPickerSheet';
 import { TagSpendRow } from '../../components/tags/TagSpendRow';
+import { MoveTransactionSheet } from '../../components/transactions/MoveTransactionSheet';
 import { TransactionRow } from '../../components/transactions/TransactionRow';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -326,7 +327,10 @@ export default function BudgetDetailScreen() {
   const setActiveTag = useBudgetDetailStore((state) => state.setActiveTag);
   const removeTransaction = useBudgetDetailStore((state) => state.removeTransaction);
   const updateTransaction = useBudgetDetailStore((state) => state.updateTransaction);
+  const moveTransaction = useBudgetDetailStore((state) => state.moveTransaction);
   const archiveMany = useBudgetsStore((state) => state.archiveMany);
+  const budgets = useBudgetsStore((state) => state.budgets);
+  const loadBudgets = useBudgetsStore((state) => state.load);
   const moveToFolder = useBudgetsStore((state) => state.moveToFolder);
   const folders = useFoldersStore((state) => state.folders);
   const loadFolders = useFoldersStore((state) => state.load);
@@ -348,16 +352,19 @@ export default function BudgetDetailScreen() {
   // itself goes through the budgets store (which re-reads from the repository).
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [movingTransaction, setMovingTransaction] = useState(null);
+  const [moveBusy, setMoveBusy] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       if (budgetId) {
         load(budgetId);
         loadFolders();
+        loadBudgets();
         // Every time this budget is opened the drawer starts collapsed.
         setTagsDrawerOpen(false);
       }
-    }, [budgetId, load, loadFolders]),
+    }, [budgetId, load, loadFolders, loadBudgets]),
   );
 
   // Date grouping walks every transaction of the budget, so it is memoized on
@@ -410,8 +417,26 @@ export default function BudgetDetailScreen() {
     [updateTransaction],
   );
 
-  // Swipe actions per row: existing actions, then Delete, then the Paid/Unpaid
-  // toggle. The label names the action that will happen, not the current state.
+  const handleMoveTransaction = useCallback(
+    async (destinationBudgetId) => {
+      if (!movingTransaction || moveBusy) return;
+      const destination = budgets.find((entry) => entry.id === destinationBudgetId);
+      setMoveBusy(true);
+      try {
+        await moveTransaction(movingTransaction.id, destinationBudgetId);
+        setMovingTransaction(null);
+        showToast(`Moved to ${destination?.name ?? 'the selected budget'}`, 'success');
+      } catch (moveError) {
+        showToast(moveError?.message ?? 'Could not move the transaction.', 'error');
+      } finally {
+        setMoveBusy(false);
+      }
+    },
+    [budgets, moveBusy, moveTransaction, movingTransaction],
+  );
+
+  // Swipe actions per row: Delete asks for confirmation, Move opens the
+  // destination picker, and Paid/Unpaid is only present on statused transactions.
   const buildTransactionActions = useCallback(
     (transaction) => {
       const actions = [
@@ -421,6 +446,13 @@ export default function BudgetDetailScreen() {
           icon: 'trash',
           tone: 'destructive',
           onPress: () => confirmDeleteTransaction(transaction),
+        },
+        {
+          key: 'move',
+          label: 'Move',
+          icon: 'wallet',
+          accessibilityLabel: `Move ${transaction.description || 'this transaction'} to another budget`,
+          onPress: () => setMovingTransaction(transaction),
         },
       ];
       const payment = effectivePaymentStatus(transaction);
@@ -875,6 +907,19 @@ export default function BudgetDetailScreen() {
         }
         accessibilityLabel="Add transaction"
       />
+
+      {movingTransaction ? (
+        <MoveTransactionSheet
+          transaction={movingTransaction}
+          currentBudget={budget}
+          budgets={budgets}
+          folders={folders}
+          currency={currency}
+          busy={moveBusy}
+          onConfirm={handleMoveTransaction}
+          onClose={() => setMovingTransaction(null)}
+        />
+      ) : null}
 
       {folderPickerOpen ? (
         <FolderPickerSheet
