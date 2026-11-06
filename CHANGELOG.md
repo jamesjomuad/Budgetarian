@@ -181,6 +181,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the opening route and receipt file writes onto the APIs this SDK requires.
 
 ### Fixed
+- Leaving an unchanged transaction no longer makes Back appear unresponsive,
+  including when the transaction was opened from Calendar. The edit form's
+  departure guard now compares Time and Notes consistently with auto-save, so
+  header and Android hardware Back can dismiss the modal and return to the
+  preserved Calendar screen; changes to either field are still saved first.
 - The selection bar no longer glues its action buttons to the screen's bottom
   edge. It keeps a visible gap under them on top of the safe-area inset, so
   the Breakdown selection bar (Move up, Move down, Delete) and every other

@@ -562,8 +562,10 @@ export default function TransactionFormScreen() {
       amountMinor: toMinor(amount, currency),
       tagId,
       date,
+      time,
       dueDate,
       description,
+      notes,
       breakdownActive,
       items,
     });
@@ -577,8 +579,10 @@ export default function TransactionFormScreen() {
     currency,
     tagId,
     date,
+    time,
     dueDate,
     description,
+    notes,
     breakdownActive,
     items,
   ]);

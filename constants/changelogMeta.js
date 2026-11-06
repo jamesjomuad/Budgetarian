@@ -55,6 +55,7 @@ export const changelogSections = [
       {
         "title": "Fixed",
         "items": [
+          "Leaving an unchanged transaction no longer makes Back appear unresponsive, including when the transaction was opened from Calendar. The edit form's departure guard now compares Time and Notes consistently with auto-save, so header and Android hardware Back can dismiss the modal and return to the preserved Calendar screen; changes to either field are still saved first.",
           "The selection bar no longer glues its action buttons to the screen's bottom edge. It keeps a visible gap under them on top of the safe-area inset, so the Breakdown selection bar (Move up, Move down, Delete) and every other list using the same bar have breathing room below the last row.",
           "Transaction lists no longer stick when a scroll starts on a row. A swipe action used to claim a mostly vertical drag as soon as it drifted sideways, freezing the Budget page's list until the finger lifted; vertical movement now hands the gesture straight back to the list, so scrolling begins every time while tapping a transaction and swiping one open still work as before. The Budgets list uses the same row and benefits too.",
           "Unselected options in Settings (Appearance and Currency) now stay completely blank. Transparent icon color on Android could render opaque glyphs, making all options appear checked on light cards; rows now use empty fixed-size slots so content never shifts while only the active selection displays a check.",
