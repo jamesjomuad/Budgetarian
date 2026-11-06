@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Move budgets between folders. The Move action in a budget's details or
-  overflow menu opens a picker naming that budget and its current folder,
-  lists only other existing folders plus the root list, and leaves the current
-  location out. Moving keeps the same budget, with every transaction,
+- Move budgets between folders. The Move action in a budget's swipe actions,
+  details or overflow menu opens a picker naming that budget and its current
+  folder, lists only other existing folders plus the root list, and leaves the
+  current location out. Moving keeps the same budget, with every transaction,
   breakdown item, tag, reminder, attachment, color and setting intact, and
   updates both the old and new folder lists immediately. Cancelling changes
   nothing, and archived budgets have no Move action.

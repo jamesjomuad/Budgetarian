@@ -201,8 +201,8 @@ export default function BudgetsScreen() {
     [archiveMany],
   );
 
-  // The single action a budget row exposes. Tone resolves to the destructive
-  // theme tokens inside SwipeActionRow, matching the transaction swipe.
+  // A budget row's swipe actions. Move reuses the same destination picker and
+  // confirmation flow as the details sheet; Delete keeps its destructive tone.
   const budgetActions = useCallback(
     (budget) => [
       {
@@ -212,6 +212,13 @@ export default function BudgetsScreen() {
         tone: 'destructive',
         accessibilityLabel: `Delete ${budget.name}`,
         onPress: () => confirmSwipeDelete(budget),
+      },
+      {
+        key: 'move',
+        label: 'Move',
+        icon: 'folder',
+        accessibilityLabel: `Move ${budget.name} to another folder`,
+        onPress: () => setMoveBudget(budget),
       },
     ],
     [confirmSwipeDelete],
