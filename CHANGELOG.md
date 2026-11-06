@@ -172,6 +172,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the opening route and receipt file writes onto the APIs this SDK requires.
 
 ### Fixed
+- The selection bar no longer glues its action buttons to the screen's bottom
+  edge. It keeps a visible gap under them on top of the safe-area inset, so
+  the Breakdown selection bar (Move up, Move down, Delete) and every other
+  list using the same bar have breathing room below the last row.
 - Transaction lists no longer stick when a scroll starts on a row. A swipe
   action used to claim a mostly vertical drag as soon as it drifted sideways,
   freezing the Budget page's list until the finger lifted; vertical movement

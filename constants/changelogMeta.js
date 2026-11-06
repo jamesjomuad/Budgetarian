@@ -54,6 +54,7 @@ export const changelogSections = [
       {
         "title": "Fixed",
         "items": [
+          "The selection bar no longer glues its action buttons to the screen's bottom edge. It keeps a visible gap under them on top of the safe-area inset, so the Breakdown selection bar (Move up, Move down, Delete) and every other list using the same bar have breathing room below the last row.",
           "Transaction lists no longer stick when a scroll starts on a row. A swipe action used to claim a mostly vertical drag as soon as it drifted sideways, freezing the Budget page's list until the finger lifted; vertical movement now hands the gesture straight back to the list, so scrolling begins every time while tapping a transaction and swiping one open still work as before. The Budgets list uses the same row and benefits too.",
           "Unselected options in Settings (Appearance and Currency) now stay completely blank. Transparent icon color on Android could render opaque glyphs, making all options appear checked on light cards; rows now use empty fixed-size slots so content never shifts while only the active selection displays a check.",
           "Needs Attention on Home now flags only real financial trouble. A budget is no longer listed just because its period is close to ending — elapsed time says nothing about the money. The section shows budgets spending ahead of received income and unpaid payments past their due date, the overdue rows no longer repeat under Upcoming, and alert rows no longer carry the elapsed-period bar and percentage.",

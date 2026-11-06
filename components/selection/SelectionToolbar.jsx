@@ -31,8 +31,10 @@ export function SelectionToolbar({ count, onCancel, actions = [], cancelLabel = 
           backgroundColor: colors.surfaceElevated,
           borderColor: colors.border,
           gap: spacing.sm,
-          // Sit above the system navigation bar, not under it.
-          paddingBottom: Math.max(insets.bottom, spacing.md, 4),
+          // Sit above the system navigation bar, not under it — and keep a
+          // visible strip of the bar below the action row, so the buttons
+          // never read as glued to the screen's bottom edge.
+          paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm,
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.md,
         },
