@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 
 import { SelectionCheckbox } from '../components/selection/SelectionCheckbox';
 import { SelectionWrapper } from '../components/selection/SelectionWrapper';
+import { BudgetDetailSheet } from '../components/budgets/BudgetDetailSheet';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -45,6 +46,9 @@ export default function ArchiveScreen() {
 
   const [busy, setBusy] = useState(false);
   const [pendingId, setPendingId] = useState(null);
+  // The archived budget whose details are shown while a selection is active.
+  // The checkbox stays the only selection control; tapping the row opens this.
+  const [detailBudget, setDetailBudget] = useState(null);
   // Re-entrancy guards for the bulk actions: a double tap on the toolbar can
   // never start the same batch twice.
   const restoringRef = useRef(false);
@@ -262,6 +266,7 @@ export default function ArchiveScreen() {
                       selectable={sel.selectionMode}
                       selected={sel.isSelected(budget.id)}
                       onToggleSelect={sel.toggleItem}
+                      onOpen={setDetailBudget}
                       onRestore={handleRestore}
                       onDelete={handleDelete}
                     />
@@ -275,6 +280,15 @@ export default function ArchiveScreen() {
             )}
           </Screen>
           {sel.selectionMode ? sel.toolbar : null}
+          <BudgetDetailSheet
+            budget={detailBudget}
+            currency={currency}
+            archived
+            busy={pendingId === detailBudget?.id}
+            onClose={() => setDetailBudget(null)}
+            onRestore={handleRestore}
+            onDelete={handleDelete}
+          />
         </View>
       )}
     </SelectionWrapper>
@@ -287,9 +301,10 @@ export default function ArchiveScreen() {
  * separated by hairlines, like every other budget list in the app.
  *
  * While a selection is active, the shared child checkbox appears to the left
- * and the Restore/Delete buttons step aside: the row itself toggles the
- * selection, exactly like a Budget row on Home. The checkbox stays its own
- * press target, so a tap on it can never fire the row's own press.
+ * and the Restore/Delete buttons step aside: the checkbox is the only
+ * selection control, while a tap anywhere else on the row opens its details
+ * sheet. The checkbox stays its own press target, so a tap on it can never
+ * fire the row's own press.
  */
 function ArchivedBudgetRow({
   budget,
@@ -299,6 +314,7 @@ function ArchivedBudgetRow({
   selectable,
   selected,
   onToggleSelect,
+  onOpen,
   onRestore,
   onDelete,
 }) {
@@ -401,11 +417,9 @@ function ArchivedBudgetRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={
-        selected ? `Deselect ${budget.name}` : `Select ${budget.name}`
-      }
+      accessibilityLabel={`View ${budget.name} details`}
       accessibilityState={{ selected }}
-      onPress={() => onToggleSelect(budget.id)}
+      onPress={() => onOpen?.(budget)}
       style={({ pressed }) => [rowStyle, pressed ? { opacity: 0.7 } : null]}
     >
       {content}

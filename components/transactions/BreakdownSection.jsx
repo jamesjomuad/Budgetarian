@@ -32,9 +32,10 @@ const HANDLE_MIN_HEIGHT = 56;
  * it can never move.
  *
  * While the form is in selection mode the drag handle gives way to a child
- * checkbox and a row tap toggles that row instead of opening the sheet, so a
- * selection gesture can never start a drag. The parent screen owns the
- * selection state and the bulk actions; this section only renders them.
+ * checkbox, so a selection gesture can never start a drag; the checkbox is the
+ * only selection control. Tapping the row still opens its detail sheet in
+ * either mode. The parent screen owns the selection state and the bulk
+ * actions; this section only renders them.
  */
 export function BreakdownSection({
   items,
@@ -260,18 +261,9 @@ function BreakdownRow({
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={
-          selectionMode
-            ? selected
-              ? `Deselect ${item.description}`
-              : `Select ${item.description}`
-            : `Open ${item.description}`
-        }
-        accessibilityHint={
-          selectionMode ? undefined : 'Shows the full item with edit and delete actions'
-        }
-        accessibilityState={selectionMode ? { selected } : undefined}
-        onPress={selectionMode ? () => onToggleSelect(item.id) : onOpen}
+        accessibilityLabel={`Open ${item.description}`}
+        accessibilityHint="Shows the full item with edit and delete actions"
+        onPress={onOpen}
         style={({ pressed }) => [styles.copy, { opacity: pressed ? 0.7 : 1 }]}
       >
         <Text variant="body" numberOfLines={1}>

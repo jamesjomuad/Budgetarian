@@ -12,6 +12,7 @@ import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BudgetCard } from "../../components/budgets/BudgetCard";
+import { BudgetDetailSheet } from "../../components/budgets/BudgetDetailSheet";
 import { CreateFab, CREATE_FAB_SIZE } from "../../components/budgets/CreateFab";
 import { FolderGroupCard } from "../../components/budgets/FolderGroupCard";
 import { FolderPickerSheet } from "../../components/budgets/FolderPickerSheet";
@@ -68,6 +69,9 @@ export default function BudgetsScreen() {
   const currency = useSettingsStore((state) => state.currency);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  // The budget whose details are shown while a selection is active. A row's
+  // checkbox stays the only selection control; tapping the row opens this.
+  const [detailBudget, setDetailBudget] = useState(null);
 
   // Pull-to-refresh re-reads the same sources as focus, plus the active
   // transaction search when one is running. Only the native spinner is owned
@@ -331,6 +335,11 @@ export default function BudgetsScreen() {
     [],
   );
 
+  const openBudgetDetail = useCallback(
+    (budget) => setDetailBudget(budget),
+    [setDetailBudget],
+  );
+
   // Unified search hits: folders first, then budgets, each keeping its own
   // existing store order. Rows render through the same components as the
   // main budget list.
@@ -514,7 +523,13 @@ export default function BudgetsScreen() {
               selectable={sel.selectionMode && !forSearch}
               selected={!forSearch && sel.isSelected(item.budget.id)}
               onToggleSelect={sel.toggleItem}
-              onPress={lifted ? undefined : openFolder}
+              onPress={
+                lifted
+                  ? undefined
+                  : sel.selectionMode && !forSearch
+                    ? openBudgetDetail
+                    : openFolder
+              }
               isLast={index === total - 1}
               reorder={forSearch ? null : reorder}
             />
@@ -946,6 +961,17 @@ export default function BudgetsScreen() {
                 onClose={() => setPickerOpen(false)}
               />
             ) : null}
+
+            <BudgetDetailSheet
+              budget={detailBudget}
+              currency={currency}
+              onClose={() => setDetailBudget(null)}
+              onOpen={openFolder}
+              onEdit={(budget) =>
+                router.push({ pathname: '/budget/form', params: { id: budget.id } })
+              }
+              onArchive={confirmSwipeDelete}
+            />
           </View>
         );
       }}

@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BudgetCard } from '../../components/budgets/BudgetCard';
+import { BudgetDetailSheet } from '../../components/budgets/BudgetDetailSheet';
 import { FolderPickerSheet } from '../../components/budgets/FolderPickerSheet';
 import { DraggableRows } from '../../components/lists/DraggableRows';
 import { SelectionWrapper } from '../../components/selection/SelectionWrapper';
@@ -200,6 +201,45 @@ export default function FolderDetailScreen() {
     [],
   );
 
+  // The budget whose details are shown while a selection is active. The
+  // checkbox stays the only selection control; tapping the row opens this.
+  const [detailBudget, setDetailBudget] = useState(null);
+  const openBudgetDetail = useCallback(
+    (budget) => setDetailBudget(budget),
+    [setDetailBudget],
+  );
+
+  // Archiving one budget from the details sheet follows the same contract as
+  // the Budgets tab: confirm, soft-delete, and leave the data restorable.
+  const handleArchiveBudget = useCallback(
+    (budget) => {
+      Alert.alert(
+        `Delete ${budget.name}?`,
+        'This budget will be removed from your active lists and moved to Archive. Its financial data will be preserved, and you can restore it later from Archive.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            // Neutral, not destructive: archiving is reversible.
+            style: 'default',
+            onPress: async () => {
+              try {
+                await archiveMany([budget.id]);
+                showToast('1 budget archived', 'success');
+              } catch (error) {
+                showToast(
+                  error?.message ?? 'Could not archive this budget.',
+                  'error',
+                );
+              }
+            },
+          },
+        ],
+      );
+    },
+    [archiveMany],
+  );
+
   if (isLoadingFolders && !folder) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.background }]}>
@@ -393,7 +433,13 @@ export default function FolderDetailScreen() {
                           selectable={sel.selectionMode}
                           selected={sel.isSelected(item.budget.id)}
                           onToggleSelect={sel.toggleItem}
-                          onPress={lifted ? undefined : openBudget}
+                          onPress={
+                            lifted
+                              ? undefined
+                              : sel.selectionMode
+                                ? openBudgetDetail
+                                : openBudget
+                          }
                           isLast={index === total - 1}
                           reorder={reorder}
                         />
@@ -415,6 +461,17 @@ export default function FolderDetailScreen() {
                 onClose={() => setPickerOpen(false)}
               />
             ) : null}
+
+            <BudgetDetailSheet
+              budget={detailBudget}
+              currency={currency}
+              onClose={() => setDetailBudget(null)}
+              onOpen={openBudget}
+              onEdit={(budget) =>
+                router.push({ pathname: '/budget/form', params: { id: budget.id } })
+              }
+              onArchive={handleArchiveBudget}
+            />
           </GestureHandlerRootView>
         );
       }}

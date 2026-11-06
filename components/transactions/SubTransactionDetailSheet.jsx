@@ -52,7 +52,11 @@ export function SubTransactionDetailSheet({
               backgroundColor: colors.surfaceElevated,
               borderTopLeftRadius: radius.xl,
               borderTopRightRadius: radius.xl,
-              paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg,
+              // The safe-area part can sit under Android's translucent
+              // navigation bar, so the extra gap (not the inset) is what the
+              // eye reads below the last action. Keep enough of it that the
+              // buttons never look glued to the bottom edge.
+              paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.xl,
               paddingHorizontal: spacing.lg,
             },
           ]}

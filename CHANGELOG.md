@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Details drawers for checkbox rows. While a selection is active, tapping a
+  budget row — on the Budgets tab, inside a folder, or in the Archive — now
+  opens a sheet with that budget's balance, period and spent total plus the
+  actions its row already supported (Open, Edit and Archive, or Restore and
+  Delete permanently in the Archive). Tapping a breakdown row still opens its
+  item sheet. The checkbox remains the only way to select a row, so a tap on
+  the row itself never doubles as a selection toggle.
 - Clone for breakdown items. Each item's detail sheet offers Clone beside
   Edit, which duplicates the item — description, amount, purchase date and
   time, and notes — directly beneath the original with a new id, confirms the

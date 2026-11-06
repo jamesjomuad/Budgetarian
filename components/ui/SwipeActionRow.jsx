@@ -157,7 +157,6 @@ export function SwipeActionRow({
       if (requested === 0) return;
       setSwipeOffset(swipeX, withTiming(0, SNAP));
     },
-    [],
   );
 
   // Called from the gesture worklet once the drag settles. Keeps the registry
