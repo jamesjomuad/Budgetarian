@@ -165,6 +165,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the opening route and receipt file writes onto the APIs this SDK requires.
 
 ### Fixed
+- Transaction lists no longer stick when a scroll starts on a row. A swipe
+  action used to claim a mostly vertical drag as soon as it drifted sideways,
+  freezing the Budget page's list until the finger lifted; vertical movement
+  now hands the gesture straight back to the list, so scrolling begins every
+  time while tapping a transaction and swiping one open still work as before.
+  The Budgets list uses the same row and benefits too.
 - Unselected options in Settings (Appearance and Currency) now stay completely
   blank. Transparent icon color on Android could render opaque glyphs, making
   all options appear checked on light cards; rows now use empty fixed-size
