@@ -26,50 +26,43 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Move budgets between folders. The Move action in a budget's swipe actions, details or overflow menu opens a picker naming that budget and its current folder, lists only other existing folders plus the root list, and leaves the current location out. Moving keeps the same budget, with every transaction, breakdown item, tag, reminder, attachment, color and setting intact, and updates both the old and new folder lists immediately. Cancelling changes nothing, and archived budgets have no Move action.",
-          "Move transactions between budgets. A transaction row's swipe actions now place Move between Delete and Paid/Unpaid, opening a picker that identifies the entry and its current budget and lists only other active budgets, with folder names to tell similar budgets apart. Confirming keeps the same transaction, breakdown, tags, notes, payment state, receipts and reminders intact while both budgets refresh their totals; cancelling changes nothing. Previously scheduled reminder taps also resolve the transaction's current budget without rescheduling the notification.",
-          "Details drawers for checkbox rows. While a selection is active, tapping a budget row — on the Budgets tab, inside a folder, or in the Archive — now opens a sheet with that budget's balance, period and spent total plus the actions its row already supported (Open, Edit and Archive, or Restore and Delete permanently in the Archive). Tapping a breakdown row still opens its item sheet. The checkbox remains the only way to select a row, so a tap on the row itself never doubles as a selection toggle.",
-          "Clone for breakdown items. Each item's detail sheet offers Clone beside Edit, which duplicates the item — description, amount, purchase date and time, and notes — directly beneath the original with a new id, confirms the copy briefly, and counts it in the parent total like any other item. The original is left untouched, and the copy can be edited, moved or deleted on its own.",
-          "Optional Time and Notes on transactions. A new transaction records the current local time, which can be changed with the shared time picker or cleared entirely; transactions saved before this existed keep no time at all rather than an invented one. On the same date, timed transactions sort ahead of untimed ones and later times lead. A separate multi-line Notes field sits beside Description (which stays the short title), saved and restored on edit with surrounding whitespace trimmed and line breaks kept. Date and time show together in transaction lists, the Calendar timeline (only when a time exists) and a reminder's linked-transaction line, and both fields travel through backups, single-budget files and CSV/Excel exports.",
-          "Multi-select for transaction breakdown items. A checkbox in the Breakdown header switches the section into selection mode, where every item shows a checkbox in place of its drag handle and a bottom bar can move the selected items up or down or delete them together. A bulk delete offers one Undo, and single-item editing, adding and drag reordering still behave as before.",
-          "Single-budget export center. A budget's options menu now opens an export screen offering five formats for that budget alone: a restorable Budgetarian JSON backup, an Excel workbook, a CSV of its transactions, an invoice PDF and a financial report PDF. Every format previews its exact contents before anything is written - the JSON preview lists record counts and receipt size, the spreadsheet previews show each sheet or row table, and the invoice and report previews render the real paginated pages. Save or Share happens from the preview, so the file always matches what was reviewed; if the budget changes while a preview is open, exporting is blocked until the refreshed preview is reviewed again. Invoice numbers, dates, client details, lines, quantities, discount, tax, notes and payment terms are configurable, and an invoice never records income or changes a transaction. Reports respect a chosen date range and optional details/summary sections, exclude transfers and archived budgets, and their totals follow the app's own calculations. Spreadsheets and CSV write amounts as real numbers and neutralise text that looks like a formula.",
-          "Single-budget import. A budget's options menu and Settings → Backup can both import one budget file without touching any other budget. A preview lists the budget, its format version, record counts and receipt size before anything is written, and the destination folder can be chosen there. Imports always create a new active budget with fresh IDs; duplicate names get an \"(Imported)\" suffix, existing tags are reused by name, and receipts travel inside the file and are copied back into app storage. Transfers and account references are not supported in a single-budget file and are rejected clearly.",
-          "Tap-through release history. The \"Latest documented version\" row in Settings → About is now a link that opens a new Changelog screen (/changelog) rendering the whole CHANGELOG.md — Unreleased work, every versioned heading, dates, categories and bullets — as native formatted content, newest first, generated locally at build time with the same parser as the About row. No network, no raw Markdown.",
-          "Release information in Settings → About. The card now shows the installed app version (from the runtime configuration) alongside the latest documented version read from CHANGELOG.md — kept clearly apart, so an undocumented or unreleased state never looks like an update offer. A small parser (utils/changelog.js) and generator (npm run gen:changelog, wired into the dev start hooks) keep the changelog version available to the app without any network call.",
-          "The Budgets page now shows two independently collapsible sections — Folders and Budgets — each with a foldable count header following the budget detail's transaction-section pattern. Selection, bulk actions, per-section drag-to-reorder, and swipe-to-delete carry over unchanged.",
-          "Swipe-to-delete on budget rows. Swiping a budget left in the Budgets list reveals a single Delete action, matching how transaction rows swipe. Delete keeps the established archive rule: the budget moves to Archive with its transactions, breakdown items, tags, reminders, attachments and color intact, after the same confirmation the budget screen shows, and Restore brings it back unchanged.",
-          "Income transactions now carry the same Paid/Unpaid payment status that expenses always had. New income defaults to Paid, older income rows without a status read as Paid, and the Status control in the transaction form appears for both Expense and Income. Transfers keep no payment status: the form hides the control for them and the database stores NULL.",
-          "An \"Add\" action inline with the Breakdown section header on the transaction form, allowing new items to be added directly without scrolling to the bottom of the card.",
-          "Multi-select on the Archive screen, using the same shared checkboxes, three-state select-all and contextual toolbar as Home and folders. Bulk Restore returns every chosen budget through the existing restore rule — to its original folder when it still exists, otherwise to the root list — and bulk Delete permanently removes only the selected archived budgets, after a confirmation that names the count and states that it cannot be undone. Each deleted budget takes its transactions, breakdown items, reminders and attachments with it, and any row that fails stays in Archive with a report instead of a false success."
+          "Added budget moving between folders without losing budget data.",
+          "Added transaction moving between active budgets with all details intact.",
+          "Added budget details and actions to selection mode.",
+          "Added breakdown item cloning.",
+          "Added optional time and notes to transactions.",
+          "Added breakdown multi-select for reordering and deletion.",
+          "Added single-budget export in JSON, Excel, CSV, invoice, and report formats.",
+          "Added single-budget import with preview and destination folder selection.",
+          "Added in-app release history and latest release information.",
+          "Added collapsible Folders and Budgets sections with independent ordering.",
+          "Added swipe-to-delete archiving for budget rows.",
+          "Added paid and unpaid status for income.",
+          "Added a breakdown add action beside the section header.",
+          "Added archive multi-select for restoring and permanently deleting budgets."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The Budgets page search field now draws a full outline like every other field in the app, instead of only an underline under it.",
-          "On the Budgets page, the Select all checkbox now sits in front of the Budgets section label instead of after it, matching the Breakdown header.",
-          "The selection bar no longer breaks its actions onto an uneven second line. Cancel and the selected count sit on one row, and the actions share the row beneath them, so a transaction's Move up, Move down and Delete stay aligned and evenly spaced at any phone width. Single- and two-action bars keep the same shape with the actions splitting the row between them.",
-          "The Breakdown section's Select all checkbox now sits in front of the section label instead of after it, and no longer draws a hairline under itself, so the header reads as one plain row.",
-          "Remaining balance is now payment-status aware everywhere. Only a Paid expense actually subtracts money and only a Paid income actually adds it, so the remaining balance, account balances, total assets, budget spend, tag breakdowns, the Home dashboard, Reports and every export all read the same real cash picture. An Unpaid row stays fully visible in lists, the Calendar and every export, but is held apart instead of folded into cash: unpaid expenses are reported as outstanding obligations and unpaid income as expected income, and each moves into the actual totals the moment it is marked Paid — and back out again if it returns to Unpaid. A status change never edits the amount, transfers keep their existing rules, reminder completion still never marks anything Paid, and rows recorded before the status existed keep reading as Paid. Budget export summaries now list Received income, Paid expenses, Remaining, Expected income and Unpaid expenses as their own figures, and the budget and Reports screens name the outstanding amounts they leave out.",
-          "The Calendar now holds a fixed month grid above a daily timeline. The selected date lists its expenses, income and reminders in one chronological stream with a time column, and only that stream scrolls, so the calendar stays in view while browsing a busy day. The grid tightens on shorter screens to keep that stream usable. Expenses keep their paid/unpaid status, reminders show Pending, Overdue or Completed with Complete and Remind Later behind an Actions toggle, and every row opens its existing transaction or reminder screen.",
-          "The time picker's Hour and Minute wheels now scroll endlessly in both directions. Each column repeats its values and silently recentres on the middle copy once the wheel stops, so there is no visible start or end. Values, minute steps, the 12-hour format, the centre highlight and the saved time all stay as they were.",
-          "The Add Transaction page now mirrors the Edit Transaction page: the Attachments section moved below Reminders to the same last position, and it wears the same section chrome — header with a single add action, card body, \"No attachments yet\" empty state — instead of the bare buttons at the top of the form. Take Photo and Choose from Gallery still stage the receipt, and the recognized-text review still collapses beneath the preview.",
-          "The select-all checkbox moved off the utility row and now sits inline with the Budgets section header: folders are not selectable, so the parent checkbox belongs to the budgets section itself. Pressing it never folds or unfolds the header.",
-          "The reminder notification's \"Complete\" button now takes you where the reminder belongs: after the completion is saved, a reminder linked to a live Budget opens that Budget's detail screen, and anything else — standalone reminders, Budgets archived or deleted since the alarm was set — lands on the Calendar. Tapping the notification body itself keeps opening the transaction or reminder form exactly as before.",
-          "Unpaid income is money expected, not yet received. It no longer counts toward received income, remaining, account balances or total assets, and is reported separately as expected income. Expense totals and budget allocation semantics are unchanged — an unpaid expense is still a recorded expense. Income due dates remain an expense-only feature, so unpaid income has no calendar payment event.",
-          "The app now runs on Expo SDK 58 with React Native 0.88 and React 19.3. Screens, saved data and behaviour stay the same; the upgrade moves the unsaved-changes guard on the budget, folder, reminder and transaction forms, the opening route and receipt file writes onto the APIs this SDK requires."
+          "Improved search, selection, and breakdown header styling.",
+          "Improved selection bar spacing and action alignment.",
+          "Improved balances and reports to separate paid, unpaid, and expected amounts.",
+          "Improved Calendar with a fixed month and scrolling daily timeline.",
+          "Improved time picker with endlessly scrolling wheels.",
+          "Improved Add Transaction attachment layout to match editing.",
+          "Improved reminder completion navigation to the relevant budget or Calendar."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Leaving an unchanged transaction no longer makes Back appear unresponsive, including when the transaction was opened from Calendar. The edit form's departure guard now compares Time and Notes consistently with auto-save, so header and Android hardware Back can dismiss the modal and return to the preserved Calendar screen; changes to either field are still saved first.",
-          "The selection bar no longer glues its action buttons to the screen's bottom edge. It keeps a visible gap under them on top of the safe-area inset, so the Breakdown selection bar (Move up, Move down, Delete) and every other list using the same bar have breathing room below the last row.",
-          "Transaction lists no longer stick when a scroll starts on a row. A swipe action used to claim a mostly vertical drag as soon as it drifted sideways, freezing the Budget page's list until the finger lifted; vertical movement now hands the gesture straight back to the list, so scrolling begins every time while tapping a transaction and swiping one open still work as before. The Budgets list uses the same row and benefits too.",
-          "Unselected options in Settings (Appearance and Currency) now stay completely blank. Transparent icon color on Android could render opaque glyphs, making all options appear checked on light cards; rows now use empty fixed-size slots so content never shifts while only the active selection displays a check.",
-          "Needs Attention on Home now flags only real financial trouble. A budget is no longer listed just because its period is close to ending — elapsed time says nothing about the money. The section shows budgets spending ahead of received income and unpaid payments past their due date, the overdue rows no longer repeat under Upcoming, and alert rows no longer carry the elapsed-period bar and percentage.",
-          "The floating tab capsule now really floats. Its band is transparent and overlays the page, so content scrolls beneath the capsule instead of stopping above an opaque strip, while the last row still comes to rest clear of it. Bottom-docked Budgets controls — the create button, pinned folders and the selection toolbar — ride above the capsule.",
-          "The \"Complete\" button on reminder notifications works again. Two bugs hid it: pressing the notification body first (or Complete twice) collided in the tap handler's duplicate guard, so the button silently did nothing, and a completed reminder's notification never left the Android tray because the app called an expo-notifications API that SDK 57 renamed. Dismissal and the scheduled-alarm cancel now use the current APIs, so a completed reminder clears itself from the tray and never fires again, while other reminders on the same transaction are untouched."
+          "Fixed Back navigation when leaving unchanged transactions.",
+          "Fixed transaction list scrolling during vertical gestures.",
+          "Fixed unselected Settings options appearing checked on Android.",
+          "Fixed Home alerts to show only financial issues and overdue payments.",
+          "Fixed content and controls overlapping the floating tab bar.",
+          "Fixed Complete actions and dismissal for reminder notifications."
         ]
       }
     ]
@@ -81,9 +74,9 @@ export const changelogSections = [
     "unreleased": false,
     "categories": [
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The introduction tour's \"Get started\" now lands on Home instead of staying where the tour was opened from — finishing a replay started in Help & Guide ends at the app's front page. Skip still simply dismisses the tour in place."
+          "Improved introduction completion to open Home."
         ]
       }
     ]
@@ -97,10 +90,10 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Help & Guide, offline by design. A new screen (Settings → Help & Guide) carries nineteen bundled articles in seven categories — Getting Started, Transactions, Reminders, Archive, Data & Privacy, Troubleshooting, and Feedback & Support — with a search box that filters titles, summaries and body text. No network, no accounts: the whole guide ships inside the app. Feedback & Support explains how to reach the developer; a direct Email action appears only once a support address is configured in constants/support.js, and nothing is ever attached automatically.",
-          "First-launch introduction. A five-slide tour welcomes new users — local-only privacy, budgets and folders, receipt photos and on-device reading, reminder actions, backups and restores. Paging it is never a one-way street: Skip and a Back chevron bracket the top, the progress dots are buttons that jump to any slide, and a \"N of 5\" counter says the position in words; slide content eases in with short fades that a system reduced-motion preference switches off. It appears once: completing or skipping it marks a single settings row, and no financial data or preference is ever touched. Replay Introduction from the top of Help & Guide shows the tour again at any time. In Expo Go the tour appears on every fresh launch so reviewers can see it, and dismissing it there never writes the flag.",
-          "Inline emphasis in text. `<b>…</b>` in any app copy now renders one static Manrope weight heavier — the welcome title, help articles and captions can bold a phrase for real. At the heaviest bundled weight (display titles) there is nothing heavier to go to, so a bold span takes the brand green there instead and emphasis never goes invisible.",
-          "The Attachments section can use the camera. Adding a receipt on a new transaction now offers two sources side by side — Take Photo and Choose from Gallery — and both stay in reach while a receipt is staged, so re-attaching replaces it through the same preview, OCR and save lifecycle. On a saved transaction the add button asks the same question before opening anything. A photographed receipt is staged and copied exactly like a picked one: nothing is saved with the transaction until you save it, the image lands in app-managed receipt storage rather than staying in the camera's temp file, cancelling the camera leaves the current attachment untouched, and if camera access is denied you get plain guidance (with a Settings shortcut) instead of a dead end."
+          "Added offline Help & Guide with searchable articles.",
+          "Added a five-slide first-launch introduction with replay support.",
+          "Added bold emphasis to app text.",
+          "Added camera capture for transaction receipts."
         ]
       }
     ]
@@ -114,9 +107,9 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Reminder notifications answer back without opening the app. Every scheduled reminder now carries two notification actions — \"Complete\" and \"Remind Later\". Complete marks that one reminder done: its armed or showing notification is dismissed, the row is stored as completed (never re-scheduled by the launch resync), and the linked payment keeps its own Paid state untouched. Remind Later is a ten-minute snooze from the moment you press: the same row moves forward in time — note, transaction link and status all ride through — the old trigger is cancelled so it can never fire, and one fresh notification is armed in its place. Pressing either button twice, or on a stale notification, is safe: duplicates are ignored and the schedule queue means an action can never race the launch resync into arming the same reminder twice. Choosing a duration stays inside the app (edit the reminder); the button itself always takes the quick ten minutes.",
-          "Transaction rows in the Budget View answer to a swipe. Swiping a row left reveals its trailing actions — the inline delete trash moved into the swipe area (with its confirmation unchanged) and, right after it, a Paid/Unpaid toggle for expenses. The button is named for the action it performs, not the state you are in: a paid expense offers \"Unpaid\". Tapping writes through the same store path as the transaction form, toasts the result, and updates the row's payment badge without ever navigating into the editor. Swiping right or tapping anywhere closes the row, and only one row can be open at a time. Actions are compact theme-toned pills with an inset shadow, and the row's own surface is now opaque so its text never bleeds into the buttons mid-swipe.",
-          "The transaction form's tag chips are ordered by recent use: the tag you applied most recently sits first, less-used tags follow, and never-used tags come last in name order. Recency is derived from existing transactions (archived budgets excluded), so there is no new storage state to keep in sync — the order simply refreshes each time the form loads."
+          "Added Complete and Remind Later actions to reminder notifications.",
+          "Added transaction swipe actions for deletion and payment status.",
+          "Added recent-use ordering for transaction tags."
         ]
       }
     ]
@@ -130,21 +123,25 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Every text input carries a clear button that appears while it holds text.",
-          "A recognized receipt chip can now be added to a description that already has text instead of only replacing it: the offer is Add / Replace / Keep. Amount and date keep their replace-only semantics. And a transaction that fails validation on save finally says so — the create form, which previously did nothing at all on an invalid save, now shows the field messages in a toast."
+          "Added clear buttons to text inputs.",
+          "Added options to add or replace recognized receipt text."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The audit sweep landed across the app: contrast raised and faint text replaced wherever it dropped below readability, touch targets lifted to at least 44 px (tag rows, reminder trash, calendar cells, chart bars, segmented controls, the reports range editor and more), form errors are announced to screen readers through live-region error text, selection and search controls got truthful accessibility labels (\"Open budget\", indeterminate \"some selected\"), destructive exits gained confirmations (delete budget, remove attachment, unsaved reminder edits), and the receipt-import screen handles a broken incoming share with a proper error state instead of a dead spinner.",
-          "The budget screen's tag drawer is renamed Insights, and the segmented control's active option now glides between segments as one pill instead of repainting backgrounds. The toast gained a tone icon, speaks its tone, wraps long messages, and clears the floating tab bar."
+          "Improved text contrast, touch targets, and accessibility labels.",
+          "Improved screen-reader announcements and destructive action confirmations.",
+          "Improved budget tag insights and animated segmented controls.",
+          "Improved toast readability and accessibility."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "The tab-band context crash is repaired: expo-router 57 vendors its own react-navigation, so the old `BottomTabBarHeightContext` resolved to undefined and every reader threw on mount. A project-owned store, published by the tab bar with its measured height, replaces it. The database error screen no longer calls a navigator hook outside a navigator, and the gliding pill guards against empty option lists. SDK patch bumps restore a clean expo-doctor run."
+          "Fixed missing validation messages when transaction saving fails.",
+          "Fixed broken receipt imports showing an endless spinner.",
+          "Fixed crashes in tabs, database errors, and empty controls."
         ]
       }
     ]
@@ -158,21 +155,20 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Home is now an insights dashboard, and budget management moved to a new Budgets tab. Folders, budgets, multi-select, search, drag-to-reorder and pinning all live on Budgets exactly where you learned to find them; Home itself leads with the picture of your money rather than the list that holds it.",
-          "The create action became a centered floating button on the Budgets tab, replacing the notched raised circle inside the bar."
+          "Added a Home insights dashboard and dedicated Budgets tab.",
+          "Added a centered floating create button on Budgets."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The bottom tab bar went icon-only with larger glyphs, giving the capsule a quieter, calmer row."
+          "Improved bottom navigation with larger icon-only tabs."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Archived budgets are fully quiet: their transactions and reminders no longer appear in the Calendar, and the launch-time reminder resync stops re-arming notifications for budgets you archived.",
-          "Reminder scheduling got scoped storage reads instead of pulling every transaction row into memory and filtering it in JavaScript."
+          "Fixed archived budgets appearing in Calendar and reminder notifications."
         ]
       }
     ]
@@ -186,21 +182,21 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "The Botanical Green palette now drives every appearance mode, so System and Light wear the same brand the MoneyQ theme introduced.",
-          "Each tag chip in the budget screen's drawer is edged with the tag's configured colour — derived tints and shades that stay legible on both surfaces."
+          "Added Botanical Green colors to System and Light themes.",
+          "Added tag-colored borders to budget tag chips."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The bottom tab bar capsule lifts clear of the screen edge instead of sitting flush against it."
+          "Improved bottom tab bar spacing above the screen edge.",
+          "Improved receipt imports by removing the unused Detected card."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "The receipt share-import screen dropped its unused Detected card.",
-          "OCR that misreads the peso sign as a plain letter `P` now still recognizes the amount: the parser treats a leading OCr'd \"P\" as ₱ before deciding."
+          "Fixed receipt totals when the peso symbol is misread."
         ]
       }
     ]
@@ -214,14 +210,14 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Home's select-all checkbox docks into the Archive row's left edge — the three-state master (none / some / all) now lives on the row it controls, while the Archive pill keeps the right. Other lists keep the head-of-list checkbox."
+          "Added select-all controls to the Archive row on Home."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Archive and delete exits no longer risk the Android `ScreenStackFragment` crash: each same-tick dismiss-and-replace navigation pair collapsed into a single `dismissTo` with identical history.",
-          "Deleting a budget from its detail view archives it — the same reversible soft delete the multi-select toolbar uses — instead of hard-deleting, with a confirmation that says so plainly."
+          "Fixed Android crashes after archiving or deleting budgets.",
+          "Fixed budget deletion to archive instead of permanently removing data."
         ]
       }
     ]
@@ -235,25 +231,24 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Budgets can be archived instead of deleted (migration 015, mirrored in both storage adapters). Removing a budget from Home or a folder's selection toolbar — and deleting a folder outright — no longer destroys anything: the budgets leave the active lists while their transactions, tags, reminders and attachments stay intact. Multi-select asks first (\"Archive 3 budgets?\") and the toast it leaves behind carries an Undo that brings the same budgets back in one write, each to the folder it came from.",
-          "A new Archive screen, opened from the Archive button on Home, lists what is parked there with the day it was archived. Restore returns a budget to its folder, or to the root list when that folder no longer exists. A permanent delete is still offered there, and says plainly that it cannot be undone."
+          "Added reversible budget archiving with Undo.",
+          "Added an Archive screen for restoring or permanently deleting budgets."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The bottom navigation is rebuilt as one clean capsule. The bar was carrying three competing edges — an opaque band, a separate shadow layer behind a bordered capsule, and a hairline border on the active pill — around an oversized raised circle on a 74 px bar. Now the capsule is the only lit surface: one theme background, one soft shadow, no border, 68 px tall, with the active pill a theme-rounded soft-green shape that carries no border of its own. Every tab shares one baseline — a 22 px glyph, an 11 px label and the same icon zone — so the four tabs read as one row, and each label spans its own tab instead of a fixed 56 px box. The raised create button is smaller (56 px against 60) and sits lower, in a slot wide enough that no tab crowds it. Motion is down to two things: the single pill gliding between tabs (400 ms on a quick soft ease, following the measured icon zone) and a 1.04 icon settle over 260 ms — the extra icon lift and the overshoot are gone. Destinations, the create menu and its routes, and the safe-area behaviour are unchanged.",
-          "The transaction form's save bar is transparent, so the button floats on the page instead of sitting on a panel pinned below the list, and it casts its own shadow now. The headings on the Remaining and Amount cards sit a little closer to the figure they label.",
-          "The Tag section's \"Add or rename tags\" is a plain text link on the section title's row rather than a pill button, the tag chips are a step roomier, and the Amount card's currency symbol is sized to the figure (~3/4 of the numeral height, was half).",
-          "A reminder created from a transaction's Reminder section opens on that transaction's budget day instead of today: a transaction belongs to its budget and can be dated outside the budget's period. Picking a day by hand always wins, and a budget with no usable date leaves the suggested day in place.",
-          "A breakdown item added from an existing transaction starts on that budget's day instead of today, for the same reason — a new item lands inside the period it is filed under."
+          "Improved bottom navigation with a simpler floating capsule.",
+          "Improved transaction save controls and summary card styling.",
+          "Improved tag editing links, chip spacing, and currency sizing.",
+          "Improved default dates for transaction reminders and breakdown items."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "A tag's label in the budget screen's tags drawer stays readable however long its amount is. The label and its amount shared one line and the amount was the part that could not shrink, so a long amount took the whole 48%-wide card and clipped the tag's emoji and name away; the label now owns its own line, with the amount on the line beneath it.",
-          "Recognized receipt lines map to chips one for one again: inner whitespace is no longer collapsed, a short line like a bare `2` is kept, and a line the receipt prints twice appears twice. Chips now follow the receipt in reading order."
+          "Fixed long amounts hiding tag names in budget insights.",
+          "Fixed recognized receipt lines losing text or changing order."
         ]
       }
     ]
@@ -267,24 +262,24 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Receipt images now survive saving: on Save the shared or picked copy is moved out of the app cache into persistent document storage and the transaction records the relative path (migration 013, mirrored in both storage adapters). Reopening the transaction — or restarting the device — still shows the preview, and the full-screen viewer works for saved receipts too. Removal deletes the file only once the database update lands, deleting a transaction cleans up its receipts, and backups deliberately exclude receipt images so a restore can never point at an absent file.",
-          "A transaction can own several images: the single receipt column became an attachments table (migration 014), with legacy references folded into attachment rows during the rebuild and files on disk untouched. Adding and removing are committed immediately, like reminders — outside the form autosave — and deleting a transaction or budget cascades every attachment file away.",
-          "The Attachments section follows the same idiom as Reminders: a plain header with a plus action, one card of hairline-divided rows (thumbnail, file type, trash), an empty state with the primary add circle, and a loading row while the list is fetched. An unreadable file renders a gray \"File missing\" row that can still be removed. Picking images uses expo-file-system's own picker — no new dependency — and tiles open the existing full-screen viewer.",
-          "On-device receipt OCR: a shared or attached receipt image is scanned entirely on the device with ML Kit text recognition, and every recognized line appears verbatim as a reusable chip in a collapsible \"Recognized Text\" area inside the transaction's single Attachments section. Tapping a chip offers the text for Description, Amount, or Date through the exact same conservative money and date guards the share parser uses — reference numbers, balances, fees, and ambiguous dates are rejected inline with the field left exactly as it was — and replacing a filled field always asks first. Auto-prefill stays deliberately conservative: a confident amount and date plus a labeled or uniquely name-like merchant line, and only into fields the user has not touched. \"Scan again\" reruns against the currently attached image, an older in-flight scan can never overwrite a newer one, and removing the attachment clears its results and selection state. Nothing is ever saved by the scanner — the existing explicit Save and the staged-receipt lifecycle own that — and chip state is session-only with no schema changes. In Expo Go the area degrades to a plain \"needs a development build\" notice, and ML Kit never reaches the web bundle.",
-          "The Tags section becomes a compact drawer parked in the pinned overlay, tucked behind the Remaining card with a negative top margin so it always reads as attached. It opens collapsed — only the handle strip, now carrying the Tags count beside the rotating chevron, peeks below the card — and tapping slides it down on a pure transform animation to the clear-filter strip plus exactly three live-measured tag rows at any font scale, with nothing ever poking above the card. Transactions still scroll and stay tappable under the closed band."
+          "Added persistent receipt images that survive saving and restarting.",
+          "Added multiple image attachments to transactions.",
+          "Added a unified Attachments section with thumbnails and file status.",
+          "Added on-device receipt scanning with reusable recognized text.",
+          "Added a collapsible tag drawer to budget details."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The app icon was refreshed again."
+          "Improved the app icon design."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "The migration that introduced the attachments table could abort the upgrade on real installs (\"UNIQUE constraint failed: sub_transactions.id\"): orphaned child rows survived the transactions rebuild and collided with the restock. Child rows are now emptied explicitly before the swap and only rows whose parent survived are restocked — invisible orphans are dropped, every valid row untouched.",
-          "Dark mode contrast: the tags drawer paints the elevated surface so it reads as its own plane between the Remaining card and the background, and unselected-tag share captions move from faint to muted — measured at 2.93:1 before, now clearing 4.5:1 on every surface pair in all three themes. The same shared rows in the budget breakdown benefit too."
+          "Fixed data upgrades failing for some existing transactions.",
+          "Fixed dark mode contrast for tag drawers and captions."
         ]
       }
     ]
@@ -298,25 +293,23 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Drag-to-reorder for lists: long-press a row on Home or inside a folder to lift it (subtle scale, shadow and haptic), then drop it anywhere in the list — the rows around it slide open a gap under your finger, the scroll view auto-scrolls at the edges, and the release animates straight into the persisted order. Taps, scrolling and search are untouched: any early movement is never captured, so the row still opens or the list still scrolls exactly as before. Folders and budgets each keep their own block on Home, and only those two lists participate — transactions always stay date-ordered. Backups carry the manual order along automatically.",
-          "Budgets now store a manual per-scope position. Until you reorder anything, the familiar order (newest period first) is preserved untouched; new budgets simply append at the end of their list."
+          "Added drag-to-reorder with saved positions for folders and budgets."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "The floating tab bar marks the active tab with a single rounded-square chip that glides between icons (300 ms, with a subtle mid-travel squash) instead of painting a separate background per tab. The chip centers itself on each icon's measured zone, so it stays aligned through font loads and layout changes, and the active icon scales up gently. Reduced-motion users get instant placement.",
-          "Multi-select on Home now uses a Gmail-style checkbox that fades in to the left of each budget row while selection mode is on; the row itself is the toggle target and the chevron never moves. Long-press — the old way into selection — is now reserved entirely for starting a drag.",
-          "The transaction tag row shows the full library in a single swipeable row with narrow fading edges that appear only while tags overflow past that side and never intercept taps — the search field is gone. The Add-or-rename-tags button is centered, painted with the primary theme color, and rounded into a pill to match the chips.",
-          "The breakdown section dropped its redundant Total line: the sticky Amount card already shows the calculated sum while a breakdown is open.",
-          "Replaced the app icon and splash images, and updated the favicon and notification icon to match.",
-          "Home and the folder views now share one reusable multi-select system internally, keeping their toolbars and behavior identical as selection features grow."
+          "Improved active tab animations and reduced-motion support.",
+          "Improved budget multi-select with clearer checkboxes.",
+          "Improved transaction tag browsing with a swipeable row.",
+          "Simplified breakdowns by removing the duplicate total.",
+          "Improved app icons, splash screen, favicon, and notification icon."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Unchecked selection checkboxes have a darkened border and are now visible, and the selection toolbar's cancel button got a border of its own."
+          "Fixed unchecked checkboxes and selection cancel buttons lacking contrast."
         ]
       }
     ]
@@ -330,13 +323,13 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Share e-wallet receipts into Budgetarian from any Android app: Budgetarian now appears in the system Sharesheet for images and plain text (expo-sharing's share-target config, ACTION_SEND and ACTION_SEND_MULTIPLE). A new Import Receipt screen previews the shared image (copied into the app's cache so the temporary share grant is never relied on), shows the shared text, and hands off to the existing transaction form with a chosen budget. A deterministic, offline parser prefills amount and date only when the receipt text states them unambiguously — labeled or currency-marked totals, real calendar dates with a year, and refusal of ambiguous day/month pairs — and every remaining line is preserved verbatim in Description. No OCR, AI, or network processing; nothing is saved until the user confirms, and cancelling leaves no trace. Receiving shares requires a development build or EAS APK (not Expo Go)."
+          "Added Android receipt sharing with offline parsing and transaction preview."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "App renamed from MoneyQ to **Budgetarian**: the Expo display name, the branded theme label, on-device copy, backup file names (`Budgetarian-Backup-<date>.json`) and backup messages now say Budgetarian. Technical identifiers are deliberately unchanged for data and store compatibility: the `moneyq` deep-link scheme, `com.moneyq.app` package, Expo slug, backup `format: \"moneyq-backup\"`, and the stored `moneyq` theme key — existing installs, databases and backups keep working untouched."
+          "Renamed MoneyQ to Budgetarian throughout the app and backups."
         ]
       }
     ]
@@ -350,28 +343,29 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Export now offers a real \"Save backup file\" action: Android's system folder picker lets you choose the destination and MoneyQ writes the JSON backup directly into it (via the Storage Access Framework in expo-file-system). The share sheet stays available as a secondary \"Share\" button.",
-          "Export & Import: one JSON backup file with every budget, transaction, breakdown item, tag, reminder and setting, saved through the system share sheet or read back with the system file picker. Imports are fully validated and previewed (counts + repairs) before anything is written. Two modes: a Merge that adds new records and asks per conflict (Keep existing / Replace / Skip, with a breakdown transaction and its items treated as one unit), and a Full restore that saves a mandatory recovery backup of the current data first and replaces everything atomically. Available from Settings on Android; the browser preview reports it as unsupported.",
-          "Transaction breakdown: optional per-item entries with calculated totals, purchase dates, times and notes; unpaid expenses carry an optional payment due date shown on the Calendar and in Reports.",
-          "Sticky summary card on the transaction form painted from the folder's custom color, with dense Type/Status segmented controls and the amount, type, status and folder always visible above the scroll body.",
-          "Drag-to-reorder breakdown items via the row handle, plus accessible Move up / Move down buttons in the item detail sheet; order is stored and restored with the transaction.",
-          "Consistent icons on action buttons across the app (create, save, cancel, delete, edit, undo snackbar, type/status controls and more), driven by an optional `icon` prop on the shared Button."
+          "Added saving backups directly to an Android folder.",
+          "Added full backup import and export with merge or restore options.",
+          "Added transaction breakdown items with totals, dates, times, and notes.",
+          "Added payment due dates for unpaid expenses.",
+          "Added a sticky transaction summary with type, status, and folder details.",
+          "Added drag-to-reorder and move controls for breakdown items.",
+          "Added consistent icons to common actions."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "Fields, chips and segmented controls across the forms now share one capsule shape; the sticky amount sits left-aligned on its folder-tinted card and the create/save bar is pinned to the bottom of the screen.",
-          "The breakdown item sheet's \"Add note\" opens a proper top-aligned textarea, and the budget page's Income / Expenses / Transactions stats are split by centered separators that stay legible on tinted folder cards.",
-          "Breakdown lives in a reminders-style card that is always expanded, with a centered circular add button; deleting the last item deactivates the breakdown and the undo snackbar restores it.",
-          "The sticky summary card gained a soft floating shadow (iOS + Android elevation) and a larger, centered amount that reads as one composition with the card."
+          "Improved form controls with consistent capsule styling.",
+          "Improved breakdown notes with a multiline text area.",
+          "Improved budget totals and breakdown card layouts.",
+          "Improved sticky summary cards with clearer amounts and shadows."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Breakdown drag now measures real row heights, so a lifted row tracks the finger exactly and the enclosing scroll view can't steal the gesture.",
-          "Adding a breakdown item closes the drawer first so the success toast is actually visible over the modal."
+          "Fixed breakdown dragging to track fingers accurately.",
+          "Fixed hidden success messages after adding breakdown items."
         ]
       }
     ]
@@ -385,16 +379,17 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Reminders became an independent module with calendar management, and per-transaction reminders can be staged while creating a transaction.",
-          "Custom Android notification icon and reminder messages built from the transaction note.",
-          "The Remaining card on the folder view is tinted with the folder's custom color, with the date range moved inside."
+          "Added standalone reminders with Calendar management.",
+          "Added reminders while creating transactions.",
+          "Added custom reminder notification icons and messages.",
+          "Added folder-colored remaining balance cards."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Transient storage read failures no longer masquerade as \"Budget not found\" (SQLite access is now serialized).",
-          "Bottom spacing is inset-aware and content clears the floating tab bar."
+          "Fixed temporary storage errors appearing as missing budgets.",
+          "Fixed bottom content overlapping the floating tab bar."
         ]
       }
     ]
@@ -408,16 +403,17 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Horizontal swipe navigation between the main tabs; refreshed main nav.",
-          "Folder view: spend progress bar in the Remaining card, an independently scrollable tag grid showing only used tags with signed, right-aligned amounts, and tag/type-aware expense share bars."
+          "Added horizontal swipe navigation between main tabs.",
+          "Added folder spending progress and tag insights."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Android delivers reminders on time (`USE_EXACT_ALARM` declared).",
-          "Stale folder-detail values after edits; rounded highlight on parent transaction rows; long tag labels no longer hide amounts.",
-          "New expenses default to paid, and transaction dates default to the budget period correctly."
+          "Fixed late Android reminder notifications.",
+          "Fixed outdated folder details after editing.",
+          "Fixed transaction highlights and long tag label layouts.",
+          "Fixed default payment status and transaction dates."
         ]
       }
     ]
@@ -431,18 +427,19 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Custom bottom tab bar: notched primary line, raised plus button, icon-only tabs and headerless tab pages; plus creates a budget.",
-          "Home search across folders and transactions, with results grouped by clickable folder.",
-          "Paid/unpaid status for expenses — defaulted at creation and backfilled to paid on upgrade.",
-          "Transaction edits auto-save when you navigate away, confirmed by an app-wide toast; saving a transaction dated outside its folder period asks for confirmation first.",
-          "Optional notes on reminders, previewed in the reminders list.",
-          "Reports: Next Month period filter and a scrollable segmented control."
+          "Added a custom bottom tab bar with a central create button.",
+          "Added Home search across folders and transactions.",
+          "Added paid and unpaid status for expenses.",
+          "Added automatic transaction saving with confirmation toasts.",
+          "Added confirmation for transactions outside the budget period.",
+          "Added optional notes to reminders.",
+          "Added a Next Month filter to Reports."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "Shorter label on the pinned folders strip."
+          "Improved pinned folder labels for compact navigation."
         ]
       }
     ]
@@ -456,24 +453,27 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Calendar tab: monthly calendar with previous/next navigation, today and selection markers, transaction dots per day, reminder dots, a selected-day summary (income, expenses, total spent), the day's transactions (tap to edit) and that day's reminders. Data loads one month at a time through the existing store/repository/adapter stack.",
-          "Pinned folders: pin any folder from Home and jump to it from a shortcut bar docked at the bottom of the screen; pins survive restarts and prune deleted folders.",
-          "Appearance setting with System / Light / Dark / MoneyQ themes, plus theme polish (elevated surfaces, disabled button color, theme-aware icons).",
-          "Custom per-folder color with a real color picker."
+          "Added a Calendar tab with monthly transactions and reminders.",
+          "Added daily summaries and quick transaction editing to Calendar.",
+          "Added pinned folder shortcuts.",
+          "Added System, Light, Dark, and MoneyQ appearance themes.",
+          "Added custom folder colors with a color picker."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "Splash screen updated; tag names hidden in folder view; Android keyboard set to pan mode; new app icon."
+          "Improved the splash screen and app icon.",
+          "Improved Android keyboard positioning.",
+          "Simplified folder view by hiding tag names."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Budget form: future start dates are selectable again (the start calendar is no longer capped by the end date; the end date follows when needed).",
-          "The folder color sheet stays within the viewport.",
-          "Local notifications work in the Android APK and in Expo Go; on Expo Go for Android the app skips `expo-notifications` entirely, because evaluating the library throws there since SDK 53 (reminders stay as database rows)."
+          "Fixed future budget start date selection.",
+          "Fixed folder color sheets exceeding the screen.",
+          "Fixed local notifications in Android builds and Expo Go."
         ]
       }
     ]
@@ -487,27 +487,25 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "Transaction reminders: one optional local notification per transaction, with permission handling, launch-time resync of OS schedules against the rows, and cancellation on edit/delete.",
-          "EAS build setup and a build guide.",
-          "Folder balance shown beside the spent figure.",
-          "Shared mobile date picker (bottom-sheet calendar) used by every date field.",
-          "README with screenshots, ESLint config, LICENSE copyright notice, About screen."
+          "Added transaction reminders with local notifications.",
+          "Added folder balances beside spending totals.",
+          "Added a shared mobile date picker to date fields.",
+          "Added an About screen."
         ]
       },
       {
-        "title": "Changed",
+        "title": "Improved",
         "items": [
-          "Folder view: foldable sections, clear system bar, transactions editable.",
-          "Repayment-specific reminder fields stripped in favor of the generic transaction reminder.",
-          "Amount fields restricted to digits.",
-          "Expo SDK patch updates; legacy milestone-1 database rebuilt in migration 002."
+          "Improved folder sections and transaction editing.",
+          "Simplified reminder fields for general transactions.",
+          "Restricted amount fields to numeric input."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "`expo-notifications` Expo Go push-error guard on Android (superseded on 2026-10-08 by skipping the import in Expo Go entirely).",
-          "Budget form period chips."
+          "Fixed budget period shortcut buttons.",
+          "Fixed Android notification errors in Expo Go."
         ]
       }
     ]
@@ -521,10 +519,8 @@ export const changelogSections = [
       {
         "title": "Added",
         "items": [
-          "MoneyQ milestone 1: JavaScript/Expo foundation with local SQLite storage.",
-          "Rebuild around budgets (folders), tags and transactions with a swappable storage layer (SQLite on device, in-memory harness on web).",
-          "AGENTS.md documenting architecture, storage rules and the verification gate.",
-          "Initial commit."
+          "Introduced MoneyQ with local budgets, tags, and transactions.",
+          "Added local storage and a browser preview."
         ]
       }
     ]

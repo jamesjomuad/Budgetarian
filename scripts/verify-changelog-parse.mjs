@@ -126,10 +126,56 @@ writeFileSync(fixture, '## [2.0.0] - 2026-12-31\n');
 runGen([fixture, out]);
 check('regenerated data tracks changelog edits', readFileSync(out, 'utf8').includes('"latestVersion": "2.0.0"'));
 
-// 12. The real CHANGELOG.md generates through the default paths.
+// 12. The concise user-facing heading format also generates correctly.
+const userFacing = [
+  '# Changelog',
+  '',
+  '## [Unreleased]',
+  '',
+  '# v2.0.0 — 2026-11-09',
+  '',
+  '### Improved',
+  '- Improved backup import reliability.',
+  '',
+  '### Fixed',
+  '- Fixed Calendar transaction navigation.',
+  '',
+].join('\n');
+writeFileSync(fixture, userFacing);
+runGen([fixture, out]);
+const userFacingWritten = readFileSync(out, 'utf8');
+check('user-facing heading generates its version', userFacingWritten.includes('"latestVersion": "2.0.0"'));
+check('user-facing heading generates its date', userFacingWritten.includes('"releaseDate": "2026-11-09"'));
+check(
+  'user-facing categories survive generation',
+  userFacingWritten.includes('"title": "Improved"') && userFacingWritten.includes('"title": "Fixed"'),
+);
+
+// 13. The real CHANGELOG.md generates through the default paths.
 const realOut = join(dir, 'real.js');
 runGen(['CHANGELOG.md', realOut]);
 check('real changelog yields a versioned release', readFileSync(realOut, 'utf8').includes('"latestVersion": "1.1.0"'));
+
+// 14. Guard the concise source format without restricting approximate wording.
+const realChangelog = readFileSync(join(repoRoot, 'CHANGELOG.md'), 'utf8');
+const releaseBody = realChangelog.slice(realChangelog.indexOf('## [Unreleased]'));
+const realLines = releaseBody.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+const categories = [...releaseBody.matchAll(/^###\s+(.+?)\s*$/gm)].map((match) => match[1]);
+const entries = [...releaseBody.matchAll(/^[-*]\s+(.+?)\s*$/gm)].map((match) => match[1]);
+const normalizedEntries = entries.map((entry) => entry.toLocaleLowerCase());
+check(
+  'real changelog uses only Added, Improved, and Fixed',
+  categories.every((category) => ['Added', 'Improved', 'Fixed'].includes(category)),
+);
+check(
+  'real changelog entries stay on one line',
+  realLines.every((line) => line.startsWith('#') || /^[-*]\s+/.test(line)),
+);
+check(
+  'real changelog entries remain concise',
+  entries.every((entry) => entry.split(/\s+/).length <= 20),
+);
+check('real changelog has no duplicate entries', new Set(normalizedEntries).size === normalizedEntries.length);
 
 console.log(`verify:changelog ${passed}/${passed + failed} checks passed`);
 process.exit(failed ? 1 : 0);

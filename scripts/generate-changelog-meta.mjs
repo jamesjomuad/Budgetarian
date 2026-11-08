@@ -25,11 +25,18 @@ const fromArg = (arg, fallback) =>
 const changelogPath = fromArg(process.argv[2], 'CHANGELOG.md');
 const outputPath = fromArg(process.argv[3], 'constants/changelogMeta.js');
 
+// The user-facing format uses `# v1.2.0 — YYYY-MM-DD`. Normalize only those
+// headings so the existing shared parser and generated app data stay compatible.
+const USER_RELEASE_HEADING =
+  /^#\s+v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\s+[-–—]\s+(\d{4}-\d{2}-\d{2})\s*$/gm;
+const normalizeReleaseHeadings = (markdown) =>
+  markdown.replace(USER_RELEASE_HEADING, '## [$1] - $2');
+
 let release = null;
 let sections = [];
 let warning = null;
 try {
-  const text = readFileSync(changelogPath, 'utf8');
+  const text = normalizeReleaseHeadings(readFileSync(changelogPath, 'utf8'));
   release = latestDocumentedRelease(text);
   sections = parseChangelogSections(text);
   if (!release) warning = 'no versioned release heading found ([Unreleased] alone does not count)';

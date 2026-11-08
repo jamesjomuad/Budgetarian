@@ -118,56 +118,42 @@ storage/
 
 ## Changelog and Releases
 
-Budgetarian follows two standards:
+Budgetarian follows **Semantic Versioning (SemVer) 2.0.0** — https://semver.org/spec/v2.0.0.html.
 
-- **Keep a Changelog 1.1.0** — https://keepachangelog.com/en/1.1.0/
-- **Semantic Versioning (SemVer) 2.0.0** — https://semver.org/spec/v2.0.0.html
-
-The changelog is the root-level `CHANGELOG.md` with this structure:
+The user-facing changelog is the root-level `CHANGELOG.md` with this structure:
 
 ```markdown
 # Changelog
 
-All notable changes to this project are documented in this file.
-
-The format is based on Keep a Changelog,
-and this project adheres to Semantic Versioning.
+All notable user-facing changes to Budgetarian are documented here.
 
 ## [Unreleased]
 
+# vX.Y.Z — YYYY-MM-DD
+
 ### Added
-- ...
+- Added transaction cloning.
 
-### Changed
-- ...
-
-### Deprecated
-- ...
-
-### Removed
-- ...
+### Improved
+- Improved transaction list scrolling.
 
 ### Fixed
-- ...
-
-### Security
-- ...
-
-## [1.0.0] - YYYY-MM-DD
-
-### Added
-- ...
+- Fixed Calendar transaction navigation.
 ```
 
 **Changelog requirements**
 
-- Use only applicable categories; omit empty sections.
-- Keep entries concise, user-understandable, and grouped by change type.
-- Add new unreleased changes under `[Unreleased]`.
-- Never invent completed features, bug fixes, release dates, or historical entries.
-- Preserve existing release history when updating the changelog. The legacy date-headed sections (pre-standardization) stay untouched as history; do not backfill them into version sections.
+- Group entries under **Added**, **Improved**, or **Fixed**; omit empty categories.
+- Write one-line bullets for application users, using short, direct sentences of approximately 5–15 words.
+- Describe the user-visible result, not the implementation. Combine related changes and remove repetition.
+- Check existing entries before adding one; do not duplicate a change within Unreleased or across releases.
+- Do not include file names or paths, migration details, internal refactoring, test counts or logs, or coding-agent notes. Keep those in implementation reports, audit documents, or Git history.
+- Add meaningful new changes under `[Unreleased]`; omit trivial internal-only edits.
+- Never invent completed features, bug fixes, release dates, versions, or historical entries.
+- Preserve every historical release, its version and date, and newest-first chronological order when editing copy.
+- Keep legacy date-only headings unchanged; do not invent versions or backfill them into versioned releases.
 - Do not create a versioned release entry until a release is actually being prepared.
-- When preparing a release, move applicable unreleased entries into a versioned section and use the actual release date in `YYYY-MM-DD` format.
+- When preparing a release, move applicable unreleased entries into `# vX.Y.Z — YYYY-MM-DD` using the actual release date.
 
 ### Versioning rules (SemVer)
 
@@ -188,9 +174,9 @@ Additional rules:
 ### Agent workflow rules
 
 1. Inspect the existing `CHANGELOG.md` before implementing changes.
-2. After completing a requested change, update `[Unreleased]` when the change is meaningful to users or maintainers.
-3. Document relevant additions, behavior changes, removals, fixes, and security changes.
-4. Avoid logging trivial internal edits that have no meaningful project impact.
+2. After completing a requested change, update `[Unreleased]` when the change is meaningful to application users.
+3. Document relevant user-facing additions, improvements, and fixes using the concise format above.
+4. Avoid logging trivial internal edits that have no meaningful user-facing impact.
 5. Never claim a change is complete or tested unless the work and verification support that claim.
 6. Keep changelog edits scoped to the work performed; do not rewrite unrelated entries.
 7. Update `AGENTS.md` only when the project-wide rules themselves need to change, not for every feature.
