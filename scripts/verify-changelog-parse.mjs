@@ -129,7 +129,7 @@ check('regenerated data tracks changelog edits', readFileSync(out, 'utf8').inclu
 // 12. The real CHANGELOG.md generates through the default paths.
 const realOut = join(dir, 'real.js');
 runGen(['CHANGELOG.md', realOut]);
-check('real changelog yields a versioned release', readFileSync(realOut, 'utf8').includes('"latestVersion": "1.0.0"'));
+check('real changelog yields a versioned release', readFileSync(realOut, 'utf8').includes('"latestVersion": "1.1.0"'));
 
 console.log(`verify:changelog ${passed}/${passed + failed} checks passed`);
 process.exit(failed ? 1 : 0);

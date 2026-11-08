@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-09
+
 ### Added
 - Move budgets between folders. The Move action in a budget's swipe actions,
   details or overflow menu opens a picker naming that budget and its current

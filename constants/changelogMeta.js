@@ -5,8 +5,8 @@
 // always resolve it. changelogMeta = latest release for the About row;
 // changelogSections = the full newest-first history for /changelog.
 export const changelogMeta = {
-  "latestVersion": "1.0.0",
-  "releaseDate": "2026-10-23"
+  "latestVersion": "1.1.0",
+  "releaseDate": "2026-11-09"
 };
 
 export const changelogSections = [
@@ -15,6 +15,13 @@ export const changelogSections = [
     "version": null,
     "date": null,
     "unreleased": true,
+    "categories": []
+  },
+  {
+    "title": "1.1.0",
+    "version": "1.1.0",
+    "date": "2026-11-09",
+    "unreleased": false,
     "categories": [
       {
         "title": "Added",
