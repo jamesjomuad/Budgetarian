@@ -85,7 +85,8 @@ storage/
 constants/           finance.js (tag/type constants), colors.js
 utils/               currency, dates, calculations, id, color
 scripts/             verify-schema.mjs + loader (npm run verify:db)
-docs/                Original AI project kickoff plan
+docs/                Project documentation and planning
+web/                 Marketing website (GitHub Pages)
 ```
 
 Key rule: all SQL lives in `sqliteAdapter.js`; all table state lives in `memoryAdapter.js`. Both implement the same async interface, so repositories, stores and screens are shared verbatim across platforms.
@@ -172,7 +173,7 @@ npx eas-cli@latest update
 
 Docs: https://docs.expo.dev/eas/index.md
 
-A full Budgetarian-specific walkthrough — verification gates, APK/AAB build profiles, local builds, changing the app icon — lives in [docs/building.md](docs/building.md).
+A full Budgetarian-specific walkthrough — verification gates, APK/AAB build profiles, local builds, changing the app icon — is covered in `AGENTS.md` and the project README.
 
 ## Project Structure
 
@@ -193,7 +194,8 @@ MoneyQ/
 ├── utils/                   # currency, dates, calculations, id
 ├── constants/               # finance.js, colors.js
 ├── scripts/                 # verify-schema.mjs
-├── docs/                    # project plan
+├── docs/                    # project documentation and planning
+├── web/                     # marketing website (GitHub Pages)
 ├── app.json                 # Expo config (scheme: moneyq)
 └── package.json
 ```
@@ -241,7 +243,7 @@ Review remaining balance + per-tag spending, filter by tag
 
 ## Roadmap
 
-Evidence is from `docs/budgeting-app-ai-project-plan.md` (the original kickoff plan) and the current codebase. Items below are marked by what the code actually supports today.
+Evidence is from the project's original kickoff plan and the current codebase. Items below are marked by what the code actually supports today.
 
 - ✅ **Implemented**: budgets (period containers), income/expense transactions, shared tag library + per-tag spending analysis, multi-currency settings, SQLite persistence with migrations, web preview harness, schema/parity verification suite.
 - 🚧 **Partially implemented**: `accounts` table and transfer constraints exist in the schema and calculation rules, but the UI has no account or transfer form yet.

@@ -7,7 +7,7 @@ This directory contains the static marketing website for **Budgetarian**, publis
 ## Structure
 
 ```text
-docs/
+web/
 ├── index.html              # Landing page
 ├── features.html           # Detailed features
 ├── privacy.html            # Privacy policy
@@ -40,17 +40,18 @@ docs/
 
 ## GitHub Pages Deployment
 
-1. Go to **Settings → Pages** in the repository.
-2. Under **Source**, select **Deploy from a branch**.
-3. Choose branch: `main`, folder: `/docs`.
-4. Save. The site will be available at `https://jamesjomuad.github.io/Budgetarian/`.
+GitHub Pages "Deploy from a branch" only supports `/docs` or `/root`. Since the site lives in `/web`, use a GitHub Actions workflow:
+
+1. Create `.github/workflows/pages.yml` that checks out the repo and uploads the `web/` folder as a Pages artifact.
+2. Go to **Settings → Pages** and set **Source** to **GitHub Actions**.
+3. The site will be available at `https://jamesjomuad.github.io/Budgetarian/`.
 
 ## Local Preview
 
 Open `index.html` directly in a browser, or serve with any static file server:
 
 ```bash
-cd docs
+cd web
 python3 -m http.server 8000
 # Visit http://localhost:8000
 ```
@@ -60,4 +61,3 @@ python3 -m http.server 8000
 - This is a **marketing website** — not a web version of the mobile app.
 - All asset paths use relative links for GitHub Pages compatibility.
 - Screenshots are copied from the project's `screenshots/` directory.
-- The `docs/Final Pre-Build Testing.md` file is an existing project document, not part of the website.
