@@ -15,7 +15,14 @@ export const changelogSections = [
     "version": null,
     "date": null,
     "unreleased": true,
-    "categories": []
+    "categories": [
+      {
+        "title": "Fixed",
+        "items": [
+          "Fixed Android reminder Complete action to open the linked transaction instead of its budget."
+        ]
+      }
+    ]
   },
   {
     "title": "1.1.0",

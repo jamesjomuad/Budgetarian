@@ -4,6 +4,9 @@ All notable user-facing changes to Budgetarian are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Fixed Android reminder Complete action to open the linked transaction instead of its budget.
+
 # v1.1.0 — 2026-11-09
 
 ### Added

@@ -9,7 +9,6 @@ import {
   getLastResponseAsync,
   subscribeToResponses,
 } from '../../services/notificationService';
-import { useBudgetsStore } from '../../stores/budgetsStore';
 import { useRemindersStore } from '../../stores/remindersStore';
 
 /** True for a payload id that can name a stored row. */
@@ -21,9 +20,9 @@ function isId(value) {
  * Turns a tapped Budgetarian notification into a route, and an action-button
  * response into a persisted reminder change.
  *
- *   "Complete" action      → completeReminder(id), then the reminder's live
- *                            Budget detail — or the Calendar tab when there
- *                            is no Budget to land on
+ *   "Complete" action      → completeReminder(id), then the reminder's
+ *                            linked Transaction detail — or the Calendar
+ *                            tab when the transaction no longer exists
  *   "Remind Later" action  → snoozeReminder(id) — no navigation
  *   linked notification    → transactionId resolves the live parent Budget;
  *                            the scheduled payload's budgetId is the fallback
@@ -47,11 +46,12 @@ function isId(value) {
  * body taps (different response date) still navigate again, so a missed
  * jump can be retried from the tray.
  *
- * Navigation resolves the Budget through the completed row's own join
- * (reminder.budget_id), falling back to the scheduled payload; an archived
- * or deleted Budget — or a vanished reminder — lands on Calendar instead
- * of a broken detail screen. The response is cleared once handled, so
- * reopening the app never replays a jump, completion, or snooze.
+ * Navigation resolves the Transaction through the completed reminder's
+ * transaction_id, falling back to the scheduled payload; a deleted
+ * transaction, a missing budget link, or a vanished reminder lands on
+ * Calendar instead of a broken detail screen. The response is cleared
+ * once handled, so reopening the app never replays a jump, completion,
+ * or snooze.
  */
 export function NotificationTapHandler() {
   const handledRef = useRef(new Set());
@@ -60,23 +60,34 @@ export function NotificationTapHandler() {
     let active = true;
 
     /**
-     * Land a finished reminder where it belongs: its Budget detail while
-     * that Budget is live, otherwise the Calendar tab (standalone reminders
-     * included, and any Budget archived or deleted since the alarm armed).
+     * Land a completed reminder on its own transaction detail — the user
+     * tapped "Complete" on a specific reminder, so show them what it belongs
+     * to. Resolve the transaction from the row first (the reminder may have
+     * been moved since the notification was scheduled); fall back to the
+     * payload's ids if the read fails; and land on Calendar when neither
+     * can name a live transaction.
      */
-    async function openReminderContext(reminder, data) {
-      const budgetId = reminder?.budget_id ?? (isId(data.budgetId) ? data.budgetId : null);
-      if (isId(budgetId)) {
+    async function openCompletedReminder(reminder, data) {
+      const transactionId = reminder?.transaction_id ?? (isId(data.transactionId) ? data.transactionId : null);
+
+      if (isId(transactionId)) {
         try {
-          const budget = await useBudgetsStore.getState().fetchBudget(budgetId);
-          if (budget && budget.deleted_at == null) {
-            router.push({ pathname: '/budget/[id]', params: { id: budgetId } });
-            return;
+          const transaction = await useRemindersStore.getState().fetchTransaction(transactionId);
+          if (transaction) {
+            const budgetId = transaction.budget_id ?? (isId(data.budgetId) ? data.budgetId : null);
+            if (isId(budgetId)) {
+              router.push({
+                pathname: '/transaction/form',
+                params: { budgetId, transactionId },
+              });
+              return;
+            }
           }
         } catch {
-          // A Budget that cannot be read falls through to the Calendar.
+          // Transaction vanished between action and read; fall through.
         }
       }
+
       router.navigate('/calendar');
     }
 
@@ -108,12 +119,12 @@ export function NotificationTapHandler() {
       store
         .completeReminder(data.reminderId)
         .then((outcome) => {
-          void openReminderContext(outcome?.reminder, data);
+          void openCompletedReminder(outcome?.reminder, data);
         })
         .catch(() => {
-          // Row gone: nothing left to complete, but the payload's Budget
-          // may still be a valid destination; openReminderContext validates.
-          void openReminderContext(null, data);
+          // Row gone: nothing left to complete, but the payload's transaction
+          // may still be a valid destination; openCompletedReminder validates.
+          void openCompletedReminder(null, data);
         })
         .finally(() => {
           // Dismiss exactly the notification that carried this press,
