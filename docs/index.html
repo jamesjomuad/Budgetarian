@@ -71,12 +71,17 @@
 
     <!-- Hero -->
     <section class="hero">
+      <!-- Floating decorative elements -->
+      <div class="deco hero-deco-1" aria-hidden="true"></div>
+      <div class="deco hero-deco-2" aria-hidden="true"></div>
+      <div class="deco hero-deco-3" aria-hidden="true"></div>
+
       <div class="container">
         <div class="hero-content">
-          <h1>Take control of your money. Grow better financial habits.</h1>
-          <p>Budgetarian helps you organize budgets, track transactions, manage expenses, and understand where your money goes — all in one place.</p>
-          <div class="hero-actions">
-            <a href="./features.html" class="btn btn-primary btn-large">Explore Features</a>
+          <h1 data-reveal="fade-up">Take control of your money. Grow better financial habits.</h1>
+          <p data-reveal="fade-up" data-reveal-delay="1">Budgetarian helps you organize budgets, track transactions, manage expenses, and understand where your money goes — all in one place.</p>
+          <div class="hero-actions" data-reveal="fade-up" data-reveal-delay="2">
+            <a href="./features.html" class="btn btn-primary btn-large">Explore Features<span class="btn-arrow">→</span></a>
             <a href="#showcase" class="btn btn-secondary btn-large">Discover Budgetarian</a>
           </div>
         </div>
@@ -91,53 +96,53 @@
     <!-- Features overview -->
     <section class="section">
       <div class="container">
-        <div class="section-header">
+        <div class="section-header" data-reveal="fade-up">
           <span class="section-label">Features</span>
           <h2>Everything you need to manage your money</h2>
           <p>Simple, powerful tools designed to help you understand your finances and build lasting habits.</p>
         </div>
         <div class="features-grid">
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="1">
             <div class="feature-icon">📁</div>
             <h3>Budgets &amp; Folders</h3>
             <p>Organize your finances into period-based budgets grouped by folders. Track spending across months, projects, or goals.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="2">
             <div class="feature-icon">💰</div>
             <h3>Expense &amp; Income Tracking</h3>
             <p>Record every transaction with amounts, dates, tags, and notes. Track paid and unpaid expenses with payment status.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="3">
             <div class="feature-icon">📊</div>
             <h3>Transaction Breakdown</h3>
             <p>Split transactions into detailed breakdown items with their own dates, times, and amounts for granular tracking.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="4">
             <div class="feature-icon">📅</div>
             <h3>Calendar &amp; Reminders</h3>
             <p>View transactions in a monthly calendar and set reminders so you never miss a payment or financial obligation.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="5">
             <div class="feature-icon">🏷️</div>
             <h3>Shared Tag Library</h3>
             <p>One global tag library used across every budget. Color-code and categorize transactions your way.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="6">
             <div class="feature-icon">📈</div>
             <h3>Dashboard &amp; Insights</h3>
             <p>See income, expenses, and remaining balances at a glance. Understand spending patterns with per-tag breakdowns.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="7">
             <div class="feature-icon">📎</div>
             <h3>Receipts &amp; OCR</h3>
             <p>Attach receipt photos to transactions. Scan receipt text automatically with on-device text recognition.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="8">
             <div class="feature-icon">💾</div>
             <h3>Backup &amp; Restore</h3>
             <p>Export your data as JSON for safekeeping. Import and merge backups. Export budgets to Excel, CSV, and more.</p>
           </div>
-          <div class="feature-card">
+          <div class="feature-card" data-reveal="fade-up" data-reveal-delay="1">
             <div class="feature-icon">🔒</div>
             <h3>Private by Design</h3>
             <p>Your data stays on your device. No account, no server, no data collection. You stay in control.</p>
@@ -149,12 +154,12 @@
     <!-- Product Showcase -->
     <section class="section screenshots-section" id="showcase">
       <div class="container">
-        <div class="section-header">
+        <div class="section-header" data-reveal="fade-up">
           <span class="section-label">The App</span>
           <h2>See Budgetarian in action</h2>
           <p>A clean, intuitive interface designed for everyday money management.</p>
         </div>
-        <div class="screenshots-carousel">
+        <div class="screenshots-carousel" data-reveal="scale" data-reveal-delay="2">
           <div class="screenshot-item">
             <div class="screenshot-frame">
               <img src="./assets/images/screenshots/home.jpg" alt="Home screen with budget folders and summaries" width="280" height="560" loading="lazy">
@@ -187,7 +192,7 @@
     <section class="section privacy-section">
       <div class="container">
         <div class="privacy-content">
-          <div class="privacy-text">
+          <div class="privacy-text" data-reveal="fade-right">
             <span class="section-label">Privacy</span>
             <h2>Your finances stay yours.</h2>
             <p>Budgetarian is designed to keep your financial information on your device. No account creation, no cloud sync, no data collection. You stay in control of your data.</p>
@@ -206,7 +211,7 @@
               </div>
             </div>
           </div>
-          <div class="privacy-illustration">
+          <div class="privacy-illustration" data-reveal="fade-left" data-reveal-delay="2">
             <div class="privacy-visual" aria-hidden="true">🔐</div>
           </div>
         </div>
@@ -216,7 +221,7 @@
     <!-- CTA -->
     <section id="download">
       <div class="container">
-        <div class="cta-section">
+        <div class="cta-section" data-reveal="scale">
           <h2>Start building better money habits.</h2>
           <p>Budgetarian is coming soon to Android. Download will be available once the app is published.</p>
           <span class="btn btn-primary btn-large btn-disabled">Coming Soon</span>

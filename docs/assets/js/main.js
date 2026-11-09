@@ -1,6 +1,6 @@
 /**
  * Budgetarian Marketing Website — Main JS
- * Mobile navigation toggle + FAQ accordion.
+ * Mobile navigation toggle, FAQ accordion, scroll reveals, and animations.
  */
 
 (function () {
@@ -57,6 +57,75 @@
     if (linkPage === currentPath || (currentPath === '' && linkPage === 'index.html') || (currentPath.endsWith('/') && linkPage === 'index.html')) {
       link.classList.add('active');
     }
+  });
+
+  // --- Header scroll shadow ---
+  var siteHeader = document.querySelector('.site-header');
+  var lastScrollY = 0;
+  var ticking = false;
+
+  function updateHeader() {
+    if (window.scrollY > 10) {
+      siteHeader.classList.add('scrolled');
+    } else {
+      siteHeader.classList.remove('scrolled');
+    }
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', function () {
+    lastScrollY = window.scrollY;
+    if (!ticking) {
+      window.requestAnimationFrame(updateHeader);
+      ticking = true;
+    }
+  }, { passive: true });
+
+  // --- Scroll reveal animations ---
+  if ('IntersectionObserver' in window) {
+    var revealElements = document.querySelectorAll('[data-reveal]');
+    
+    var revealObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          // Optionally unobserve after reveal for performance
+          // revealObserver.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    });
+
+    revealElements.forEach(function (el) {
+      revealObserver.observe(el);
+    });
+  } else {
+    // Fallback: reveal all immediately if IntersectionObserver not supported
+    document.querySelectorAll('[data-reveal]').forEach(function (el) {
+      el.classList.add('revealed');
+    });
+  }
+
+  // --- Smooth anchor scrolling ---
+  document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+    anchor.addEventListener('click', function (e) {
+      var href = this.getAttribute('href');
+      if (href === '#' || href === '') return;
+      
+      var target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        var headerHeight = document.querySelector('.site-header').offsetHeight;
+        var targetPosition = target.getBoundingClientRect().top + window.pageYOffset - headerHeight - 20;
+        
+        window.scrollTo({
+          top: targetPosition,
+          behavior: 'smooth'
+        });
+      }
+    });
   });
 
   // --- Screenshots carousel (Slick) ---
