@@ -20,6 +20,7 @@ import {
 } from '../storage/repositories/settingsRepository';
 import { deleteRemindersForBudget } from '../storage/repositories/reminderRepository';
 import { cancelScheduledRemindersForBudget } from '../services/reminderService';
+import { useDashboardStore } from './dashboardStore';
 
 /**
  * Home screen state. Each entry already carries `spent`, `income` and
@@ -37,8 +38,15 @@ export const useBudgetsStore = create((set, get) => ({
   pinnedIds: [],
   isLoading: true,
   error: null,
+  lastLoadedAt: null,
 
-  load: async () => {
+  load: async (options = {}) => {
+    const { force = false } = options;
+    const { lastLoadedAt } = get();
+    const now = Date.now();
+    if (!force && lastLoadedAt && now - lastLoadedAt < 2000) {
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       const [budgets, archivedBudgets, pinned] = await Promise.all([
@@ -54,7 +62,7 @@ export const useBudgetsStore = create((set, get) => ({
       );
       const pinnedIds = pinned.filter((id) => existing.has(id));
       if (pinnedIds.length !== pinned.length) await setPinnedBudgetIds(pinnedIds);
-      set({ budgets, archivedBudgets, pinnedIds, isLoading: false });
+      set({ budgets, archivedBudgets, pinnedIds, isLoading: false, lastLoadedAt: Date.now() });
     } catch (error) {
       set({ error, isLoading: false });
     }
@@ -70,6 +78,7 @@ export const useBudgetsStore = create((set, get) => ({
   archiveMany: async (ids) => {
     await archiveBudgets(ids);
     await get().load();
+    useDashboardStore.getState().invalidate();
   },
 
   /**
@@ -79,6 +88,7 @@ export const useBudgetsStore = create((set, get) => ({
   restoreArchived: async (id) => {
     const budget = await restoreBudget(id);
     await get().load();
+    useDashboardStore.getState().invalidate();
     return budget;
   },
 
@@ -90,6 +100,7 @@ export const useBudgetsStore = create((set, get) => ({
   restoreMany: async (ids) => {
     await restoreBudgets(ids);
     await get().load();
+    useDashboardStore.getState().invalidate();
   },
 
   fetchBudget: (id) => getBudget(id),
@@ -97,12 +108,14 @@ export const useBudgetsStore = create((set, get) => ({
   addBudget: async (input) => {
     const budget = await createBudget(input);
     await get().load();
+    useDashboardStore.getState().invalidate();
     return budget;
   },
 
   editBudget: async (id, input) => {
     const budget = await updateBudget(id, input);
     await get().load();
+    useDashboardStore.getState().invalidate();
     return budget;
   },
 
@@ -116,6 +129,7 @@ export const useBudgetsStore = create((set, get) => ({
     const pinnedIds = get().pinnedIds.filter((pinnedId) => pinnedId !== id);
     if (pinnedIds.length !== get().pinnedIds.length) await setPinnedBudgetIds(pinnedIds);
     await get().load();
+    useDashboardStore.getState().invalidate();
   },
 
   /**
@@ -143,6 +157,7 @@ export const useBudgetsStore = create((set, get) => ({
     const pinnedIds = get().pinnedIds.filter((pinnedId) => !deleted.includes(pinnedId));
     if (pinnedIds.length !== get().pinnedIds.length) await setPinnedBudgetIds(pinnedIds);
     await get().load();
+    useDashboardStore.getState().invalidate();
     return { deleted, failed };
   },
 
@@ -181,4 +196,7 @@ export const useBudgetsStore = create((set, get) => ({
     await get().load();
     return budget;
   },
+
+  /** Mark data stale so the next load() actually hits storage. */
+  invalidate: () => set({ lastLoadedAt: 0 }),
 }));

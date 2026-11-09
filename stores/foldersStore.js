@@ -22,12 +22,19 @@ export const useFoldersStore = create((set, get) => ({
   folders: [],
   isLoading: true,
   error: null,
+  lastLoadedAt: null,
 
-  load: async () => {
+  load: async (options = {}) => {
+    const { force = false } = options;
+    const { lastLoadedAt } = get();
+    const now = Date.now();
+    if (!force && lastLoadedAt && now - lastLoadedAt < 2000) {
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       const folders = await getFolders();
-      set({ folders, isLoading: false });
+      set({ folders, isLoading: false, lastLoadedAt: Date.now() });
     } catch (error) {
       set({ error, isLoading: false });
     }
@@ -64,4 +71,7 @@ export const useFoldersStore = create((set, get) => ({
     await deleteFolder(id);
     await get().load();
   },
+
+  /** Mark data stale so the next load() actually hits storage. */
+  invalidate: () => set({ lastLoadedAt: 0 }),
 }));

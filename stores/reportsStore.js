@@ -54,8 +54,27 @@ export const useReportsStore = create((set, get) => ({
   trend: computeTrend('monthly', trendRange('monthly', 0), []),
   isLoading: true,
   error: null,
+  lastLoadedAt: null,
 
-  load: async (filter = get().filter) => {
+  load: async (filterOrOptions, maybeOptions) => {
+    // Support load(), load(filter), load({force}), load(filter, {force})
+    let filter;
+    let force = false;
+    if (typeof filterOrOptions === 'string') {
+      filter = filterOrOptions;
+      force = maybeOptions?.force ?? false;
+    } else if (filterOrOptions && typeof filterOrOptions === 'object') {
+      filter = get().filter;
+      force = filterOrOptions.force ?? false;
+    } else {
+      filter = get().filter;
+    }
+
+    const { lastLoadedAt } = get();
+    const now = Date.now();
+    if (!force && lastLoadedAt && now - lastLoadedAt < 2000) {
+      return;
+    }
     set({ isLoading: true, error: null, filter });
 
     try {
@@ -92,6 +111,7 @@ export const useReportsStore = create((set, get) => ({
         trendView: anchor.view,
         trend: computeTrend(anchor.view, range, purchaseRows),
         isLoading: false,
+        lastLoadedAt: Date.now(),
       });
     } catch (error) {
       set({ error, isLoading: false });
@@ -109,6 +129,9 @@ export const useReportsStore = create((set, get) => ({
     const custom =
       merged.start <= merged.end ? merged : { start: merged.end, end: merged.start };
     set({ custom });
-    await get().load('custom');
+    await get().load('custom', { force: true });
   },
+
+  /** Mark data stale so the next load() actually hits storage. */
+  invalidate: () => set({ lastLoadedAt: 0 }),
 }));

@@ -7,6 +7,9 @@ All notable user-facing changes to Budgetarian are documented here.
 ### Fixed
 - Fixed Android reminder Complete action to open the linked transaction instead of its budget.
 
+### Improved
+- Improved tab switching speed by skipping redundant data reloads.
+
 # v1.1.0 — 2026-11-09
 
 ### Added

@@ -21,6 +21,12 @@ export const changelogSections = [
         "items": [
           "Fixed Android reminder Complete action to open the linked transaction instead of its budget."
         ]
+      },
+      {
+        "title": "Improved",
+        "items": [
+          "Improved tab switching speed by skipping redundant data reloads."
+        ]
       }
     ]
   },

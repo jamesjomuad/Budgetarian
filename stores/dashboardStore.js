@@ -30,9 +30,10 @@ const DUE_AHEAD_DAYS = 30;
  * budget. Budget figures themselves come from `useBudgetsStore`, which only
  * ever loads active budgets.
  */
-export const useDashboardStore = create((set) => ({
+export const useDashboardStore = create((set, get) => ({
   isLoading: true,
   error: null,
+  lastLoadedAt: null,
   /** The month the summary covers: { monthKey, start, end, label }. */
   range: null,
   /** Parent rows only, so a breakdown is never counted twice. */
@@ -41,7 +42,14 @@ export const useDashboardStore = create((set) => ({
   upcomingReminders: [],
   recent: [],
 
-  load: async () => {
+  load: async (options = {}) => {
+    const { force = false } = options;
+    const { lastLoadedAt } = get();
+    const now = Date.now();
+    // Skip reload when data is fresh (< 2s old) unless forced
+    if (!force && lastLoadedAt && now - lastLoadedAt < 2000) {
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       const monthKey = currentMonthKey();
@@ -57,6 +65,7 @@ export const useDashboardStore = create((set) => ({
 
       set({
         isLoading: false,
+        lastLoadedAt: Date.now(),
         range: { monthKey, start, end, label: formatMonth(monthKey) },
         monthTransactions,
         upcomingPayments,
@@ -70,4 +79,7 @@ export const useDashboardStore = create((set) => ({
       set({ isLoading: false, error });
     }
   },
+
+  /** Mark data stale so the next load() actually hits storage. */
+  invalidate: () => set({ lastLoadedAt: 0 }),
 }));

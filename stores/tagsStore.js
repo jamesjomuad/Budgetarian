@@ -15,14 +15,21 @@ export const useTagsStore = create((set, get) => ({
   lastUsedByTag: {},
   isLoading: true,
   error: null,
+  lastLoadedAt: null,
 
-  load: async () => {
+  load: async (options = {}) => {
+    const { force = false } = options;
+    const { lastLoadedAt } = get();
+    const now = Date.now();
+    if (!force && lastLoadedAt && now - lastLoadedAt < 2000) {
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       // One grouped read alongside the library: screens derive any
       // usage-based ordering from this map without requerying per render.
       const [tags, lastUsedByTag] = await Promise.all([getTags(), getTagLastUsageMap()]);
-      set({ tags, lastUsedByTag, isLoading: false });
+      set({ tags, lastUsedByTag, isLoading: false, lastLoadedAt: Date.now() });
     } catch (error) {
       set({ error, isLoading: false });
     }
@@ -51,4 +58,7 @@ export const useTagsStore = create((set, get) => ({
   getUsage: (id) => countTransactionsUsingTag(id),
 
   clearError: () => set({ error: null }),
+
+  /** Mark data stale so the next load() actually hits storage. */
+  invalidate: () => set({ lastLoadedAt: 0 }),
 }));

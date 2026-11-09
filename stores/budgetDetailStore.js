@@ -15,6 +15,9 @@ import {
 import { applyReminder } from '../services/reminderService';
 import { deleteReceiptFile } from '../services/receiptFiles';
 import { useBudgetsStore } from './budgetsStore';
+import { useDashboardStore } from './dashboardStore';
+import { useCalendarStore } from './calendarStore';
+import { useReportsStore } from './reportsStore';
 import {
   collectUsedTagIds,
   computeTagExpenseBreakdown,
@@ -185,6 +188,10 @@ export const useBudgetDetailStore = create((set, get) => {
           ? null
           : await applyReminder({ transaction, reminder: input.reminder });
       await get().load(get().budgetId ?? transaction.budget_id);
+      // Transaction changed: invalidate cross-budget views
+      useDashboardStore.getState().invalidate();
+      useCalendarStore.getState().invalidate();
+      useReportsStore.getState().invalidate();
       return { transaction, reminder, attachmentError };
     },
 
@@ -195,6 +202,9 @@ export const useBudgetDetailStore = create((set, get) => {
           ? null
           : await applyReminder({ transaction, reminder: input.reminder });
       await get().load(get().budgetId);
+      useDashboardStore.getState().invalidate();
+      useCalendarStore.getState().invalidate();
+      useReportsStore.getState().invalidate();
       return { transaction, reminder };
     },
 
@@ -207,6 +217,9 @@ export const useBudgetDetailStore = create((set, get) => {
         get().load(get().budgetId),
         useBudgetsStore.getState().load(),
       ]);
+      useDashboardStore.getState().invalidate();
+      useCalendarStore.getState().invalidate();
+      useReportsStore.getState().invalidate();
       return transaction;
     },
 
@@ -220,6 +233,9 @@ export const useBudgetDetailStore = create((set, get) => {
       await deleteTransaction(transactionId);
       for (const attachment of attachments) deleteReceiptFile(attachment.path);
       await get().load(get().budgetId);
+      useDashboardStore.getState().invalidate();
+      useCalendarStore.getState().invalidate();
+      useReportsStore.getState().invalidate();
     },
 
     refresh: async () => {

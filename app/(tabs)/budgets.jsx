@@ -328,8 +328,8 @@ export default function BudgetsScreen() {
     setRefreshing(true);
     try {
       await Promise.all([
-        load(),
-        loadFolders(),
+        load({ force: true }),
+        loadFolders({ force: true }),
         debouncedTerm ? runSearch(debouncedTerm) : Promise.resolve(),
       ]);
     } finally {

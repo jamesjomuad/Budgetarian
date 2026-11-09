@@ -203,7 +203,11 @@ export default function HomeScreen() {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([load(), loadBudgets(), loadTags()]);
+      await Promise.all([
+        load({ force: true }),
+        loadBudgets({ force: true }),
+        loadTags({ force: true }),
+      ]);
     } finally {
       setRefreshing(false);
     }

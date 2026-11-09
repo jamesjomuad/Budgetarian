@@ -32,8 +32,27 @@ export const useCalendarStore = create((set, get) => ({
   reminders: [],
   isLoading: true,
   error: null,
+  lastLoadedAt: null,
 
-  load: async (monthKey = get().monthKey) => {
+  load: async (monthKeyOrOptions, maybeOptions) => {
+    // Support load(), load(monthKey), load({force}), load(monthKey, {force})
+    let monthKey;
+    let force = false;
+    if (typeof monthKeyOrOptions === 'string') {
+      monthKey = monthKeyOrOptions;
+      force = maybeOptions?.force ?? false;
+    } else if (monthKeyOrOptions && typeof monthKeyOrOptions === 'object') {
+      monthKey = get().monthKey;
+      force = monthKeyOrOptions.force ?? false;
+    } else {
+      monthKey = get().monthKey;
+    }
+
+    const { lastLoadedAt } = get();
+    const now = Date.now();
+    if (!force && lastLoadedAt && now - lastLoadedAt < 2000) {
+      return;
+    }
     set({ isLoading: true, error: null, monthKey });
 
     try {
@@ -75,15 +94,18 @@ export const useCalendarStore = create((set, get) => ({
             ? todayIso()
             : start;
 
-      set({ transactions, reminders, purchases, paymentParents, selectedDate, isLoading: false });
+      set({ transactions, reminders, purchases, paymentParents, selectedDate, isLoading: false, lastLoadedAt: Date.now() });
     } catch (error) {
       set({ error, isLoading: false });
     }
   },
 
   setMonth: async (monthKey) => {
-    await get().load(monthKey);
+    await get().load(monthKey, { force: true });
   },
 
   selectDate: (selectedDate) => set({ selectedDate }),
+
+  /** Mark data stale so the next load() actually hits storage. */
+  invalidate: () => set({ lastLoadedAt: 0 }),
 }));
