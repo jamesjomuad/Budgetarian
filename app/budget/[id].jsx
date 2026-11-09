@@ -706,33 +706,6 @@ export default function BudgetDetailScreen() {
           >
             {formatDateRange(budget.start_date, budget.end_date)}
           </Text>
-          {/* Quick move: which folder this budget lives in (or none), tap to
-              change. Touch target stays comfortable even though the text is
-              caption-sized. */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={budgetFolder ? `Move out of folder ${budgetFolder.name}` : 'Add this budget to a folder'}
-            onPress={() => setFolderPickerOpen(true)}
-            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-            style={({ pressed }) => [
-              styles.folderRow,
-              {
-                marginTop: spacing.sm,
-                opacity: pressed ? 0.6 : 1,
-              },
-            ]}
-          >
-            <Icon name="folder" size={16} color={folderInk ?? colors.textMuted} />
-            <Text
-              variant="caption"
-              tone="muted"
-              numberOfLines={1}
-              style={{ flexShrink: 1, ...(folderInk ? { color: folderInk } : null) }}
-            >
-              {budgetFolder ? `In “${budgetFolder.name}”` : 'Add to folder'}
-            </Text>
-            <Icon name="chevronRight" size={14} color={folderInk ?? colors.textMuted} />
-          </Pressable>
 
           {/* Progress bar replaces the old stats separator: the fill shows how
               much of the budget's income has been spent (expense / income). */}
@@ -798,22 +771,6 @@ export default function BudgetDetailScreen() {
               valueColor={folderInk}
             />
           </View>
-
-          {summary.expectedExpense > 0 || summary.expectedIncome > 0 ? (
-            <Text variant="caption" tone="muted" style={{ marginTop: spacing.sm }}>
-              {[
-                summary.expectedExpense > 0
-                  ? `${formatCurrency(summary.expectedExpense, { currency })} in unpaid expenses`
-                  : null,
-                summary.expectedIncome > 0
-                  ? `${formatCurrency(summary.expectedIncome, { currency })} in expected income`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}{' '}
-              — not counted above until marked Paid.
-            </Text>
-          ) : null}
         </Card>
 
         <TagsDrawer

@@ -6,6 +6,7 @@ All notable user-facing changes to Budgetarian are documented here.
 
 ### Fixed
 - Fixed Android reminder Complete action to open the linked transaction instead of its budget.
+- Removed hard-to-read date range text from the budget detail Remaining card in light theme.
 
 ### Improved
 - Improved tab switching speed by skipping redundant data reloads.
