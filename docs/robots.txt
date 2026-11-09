@@ -1,0 +1,7 @@
+# Budgetarian Marketing Website
+# https://jamesjomuad.github.io/Budgetarian/
+
+User-agent: *
+Allow: /
+
+Sitemap: https://jamesjomuad.github.io/Budgetarian/sitemap.xml

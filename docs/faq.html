@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ — Budgetarian</title>
+  <meta name="description" content="Frequently asked questions about Budgetarian: budgets, transactions, reminders, privacy, backup, and availability.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="FAQ — Budgetarian">
+  <meta property="og:description" content="Frequently asked questions about Budgetarian: budgets, transactions, reminders, privacy, backup, and availability.">
+  <meta property="og:url" content="https://jamesjomuad.github.io/Budgetarian/faq.html">
+  <meta property="og:image" content="https://jamesjomuad.github.io/Budgetarian/assets/images/icon.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="FAQ — Budgetarian">
+  <meta name="twitter:description" content="Frequently asked questions about Budgetarian: budgets, transactions, reminders, privacy, backup, and availability.">
+  <meta name="twitter:image" content="https://jamesjomuad.github.io/Budgetarian/assets/images/icon.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="./assets/images/favicon.png" type="image/png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="./assets/css/styles.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="./index.html" class="logo" aria-label="Budgetarian home">
+        <img src="./assets/images/icon.png" alt="" width="36" height="36">
+        Budgetarian
+      </a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="./features.html">Features</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./faq.html">FAQ</a>
+      </nav>
+      <a href="./index.html#download" class="btn btn-primary nav-cta">Download</a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile nav -->
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="./features.html">Features</a>
+    <a href="./privacy.html">Privacy</a>
+    <a href="./faq.html">FAQ</a>
+    <a href="./index.html#download" class="btn btn-primary">Download</a>
+  </nav>
+
+  <main>
+
+    <!-- Page hero -->
+    <section class="page-hero">
+      <div class="container">
+        <span class="section-label">FAQ</span>
+        <h1>Frequently asked questions</h1>
+        <p>Everything you need to know about Budgetarian. Can't find what you're looking for? <a href="https://github.com/jamesjomuad/Budgetarian/issues" target="_blank" rel="noopener noreferrer">Open an issue on GitHub</a>.</p>
+      </div>
+    </section>
+
+    <!-- FAQ content -->
+    <div class="faq-content">
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          What is Budgetarian?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Budgetarian is a mobile-first, offline personal budgeting app. It helps you organize your money into budgets (period-based containers like "November 2026"), track income and expenses, and understand your spending patterns. Everything runs locally on your device — no account, no cloud, no data collection.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          How do budgets and folders work?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>A <strong>budget</strong> is a period container with a name, start date, and end date. It's not an envelope with a spending limit — "spent" and "remaining" are always derived from the transactions you record inside it. You can create budgets for months, quarters, projects, or any time period.</p>
+          <p>A <strong>folder</strong> groups related budgets together. You might organize by year (2025, 2026), by purpose (Travel, Business), or any other category. Folders are purely organizational — they don't affect financial calculations.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          Can I track income and expenses?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Yes. You can record income and expense transactions with amounts, dates, tags, descriptions, and optional notes. Each transaction can also be marked as paid or unpaid to track bills and obligations. Transactions can be split into breakdown items for more granular tracking.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          How do reminders work?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>You can set reminders for transactions or create standalone reminders. When a reminder's date and time arrives, Budgetarian sends a local push notification on your Android device. You can mark reminders as complete or snooze them for later. All reminders are managed locally — no server involvement.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          Is my data private?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Yes. All your financial data is stored locally on your device using SQLite. Budgetarian does not have a backend, does not collect any data, and does not require an account. Your budgets, transactions, receipts, and settings never leave your phone. See the <a href="./privacy.html">Privacy Policy</a> for details.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          Can I back up my data?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Yes. Budgetarian supports full backup export (JSON format) that includes all your budgets, transactions, tags, and settings. You can also export individual budgets to JSON, Excel, CSV, invoice, or report formats. Backups can be saved to an Android folder of your choice. You can import a backup to restore your data or merge it with existing data.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          What happens if I uninstall the app?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Since all data is stored locally, uninstalling Budgetarian will delete all your financial data from the device. Make sure to export a backup before uninstalling if you want to keep your records. You can restore from a backup file after reinstalling.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          What currencies are supported?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Budgetarian supports multiple display currencies: PHP (default), USD, EUR, GBP, and JPY. You can change the display currency in Settings. All money is stored as integer minor units internally, so no floating-point rounding can affect your balances.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          Is Budgetarian available on iOS?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Budgetarian is currently available on Android. iOS support is planned for the future. The app is built with Expo and React Native, which makes cross-platform deployment possible. Stay tuned for updates on the <a href="https://github.com/jamesjomuad/Budgetarian" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          Is Budgetarian free?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Yes. Budgetarian is free and open-source software released under the MIT License. There are no in-app purchases, subscriptions, or ads.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          Can I contribute to Budgetarian?
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">
+          <p>Absolutely! Budgetarian is open-source. You can contribute code, report issues, or suggest features on the <a href="https://github.com/jamesjomuad/Budgetarian" target="_blank" rel="noopener noreferrer">GitHub repository</a>. Please read the contributing guidelines in the README before submitting pull requests.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CTA -->
+    <section>
+      <div class="container">
+        <div class="cta-section">
+          <h2>Start building better money habits.</h2>
+          <p>Download Budgetarian and take control of your finances.</p>
+          <span class="btn btn-primary btn-large btn-disabled">Coming Soon</span>
+          <p class="cta-soon">Available on Android. iOS coming soon.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="./index.html" class="logo">
+            <img src="./assets/images/icon.png" alt="" width="36" height="36">
+            Budgetarian
+          </a>
+          <p>A local-first budgeting app that helps you organize your money and build better financial habits.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Navigation</h4>
+          <a href="./index.html">Home</a>
+          <a href="./features.html">Features</a>
+          <a href="./privacy.html">Privacy</a>
+          <a href="./faq.html">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <a href="https://github.com/jamesjomuad/Budgetarian" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://github.com/jamesjomuad/Budgetarian/issues" target="_blank" rel="noopener noreferrer">Report an Issue</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="./privacy.html">Privacy Policy</a>
+          <a href="https://github.com/jamesjomuad/Budgetarian/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License (MIT)</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; <span id="copyright-year">2026</span> James Jomuad. All rights reserved.</p>
+        <div class="footer-social">
+          <a href="https://github.com/jamesjomuad/Budgetarian" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./assets/js/main.js"></script>
+</body>
+</html>
