@@ -85,8 +85,7 @@ storage/
 constants/           finance.js (tag/type constants), colors.js
 utils/               currency, dates, calculations, id, color
 scripts/             verify-schema.mjs + loader (npm run verify:db)
-docs/                Project documentation and planning
-web/                 Marketing website (GitHub Pages)
+docs/                Marketing website (GitHub Pages) and project documentation
 ```
 
 Key rule: all SQL lives in `sqliteAdapter.js`; all table state lives in `memoryAdapter.js`. Both implement the same async interface, so repositories, stores and screens are shared verbatim across platforms.
@@ -194,8 +193,7 @@ MoneyQ/
 ├── utils/                   # currency, dates, calculations, id
 ├── constants/               # finance.js, colors.js
 ├── scripts/                 # verify-schema.mjs
-├── docs/                    # project documentation and planning
-├── web/                     # marketing website (GitHub Pages)
+├── docs/                    # marketing website (GitHub Pages) and project docs
 ├── app.json                 # Expo config (scheme: moneyq)
 └── package.json
 ```
