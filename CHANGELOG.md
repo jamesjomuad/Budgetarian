@@ -7,6 +7,10 @@ All notable user-facing changes to Budgetarian are documented here.
 ### Added
 - Added transaction cloning.
 
+### Improved
+- Improved loading screens with skeleton placeholders instead of spinners.
+- Updated app screenshots.
+
 ### Fixed
 - Fixed reminder time defaulting to current device time instead of 9 AM.
 

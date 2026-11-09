@@ -1,6 +1,6 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -13,6 +13,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { BudgetActionsSheet } from '../../components/budgets/BudgetActionsSheet';
 import { BudgetImportSheet } from '../../components/budgets/BudgetImportSheet';
 import { FolderPickerSheet } from '../../components/budgets/FolderPickerSheet';
+import { BudgetarianSkeleton } from '../../components/skeletons/BudgetarianSkeleton';
 import { TagSpendRow } from '../../components/tags/TagSpendRow';
 import { MoveTransactionSheet } from '../../components/transactions/MoveTransactionSheet';
 import { TransactionRow } from '../../components/transactions/TransactionRow';
@@ -516,12 +517,30 @@ export default function BudgetDetailScreen() {
 
   if (!isCurrentBudget) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+      <View style={[styles.fill, { backgroundColor: colors.background }]}>
         <Stack.Screen options={{ title: 'Budget…' }} />
-        <ActivityIndicator color={colors.primary} size="large" />
-        <Text variant="body" tone="muted" style={{ marginTop: spacing.md }}>
-          Opening budget…
-        </Text>
+        <BudgetarianSkeleton name="budget-detail-loading" loading>
+          <View style={{ gap: spacing.lg }}>
+            <Card style={{ borderRadius: 25, padding: spacing.lg }}>
+              <View style={{ height: 16, width: 100, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+              <View style={{ height: 40, width: 200, backgroundColor: colors.surfaceMuted, borderRadius: 4, marginTop: spacing.md }} />
+              <View style={{ height: 12, width: 150, backgroundColor: colors.surfaceMuted, borderRadius: 4, marginTop: spacing.sm }} />
+              <View style={{ height: 8, backgroundColor: colors.surfaceMuted, borderRadius: 4, marginTop: spacing.md }} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md }}>
+                <View style={{ height: 30, width: 80, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+                <View style={{ height: 30, width: 80, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+                <View style={{ height: 30, width: 80, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+              </View>
+            </Card>
+            <View style={{ height: 20, width: 120, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+            <Card padded={false}>
+              <View style={{ padding: spacing.lg, gap: spacing.md }}>
+                <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
+                <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
+              </View>
+            </Card>
+          </View>
+        </BudgetarianSkeleton>
       </View>
     );
   }

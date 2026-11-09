@@ -21,6 +21,7 @@ import { tabBandHeight } from "../../components/navigation/tabBand";
 import { DraggableRows } from "../../components/lists/DraggableRows";
 import { SelectionWrapper } from "../../components/selection/SelectionWrapper";
 import { TransactionRow } from "../../components/transactions/TransactionRow";
+import { BudgetarianSkeleton } from "../../components/skeletons/BudgetarianSkeleton";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -727,14 +728,7 @@ export default function BudgetsScreen() {
                 ) : null}
               </Animated.View>
 
-              {isLoading && budgets.length === 0 ? (
-                <View style={styles.loading}>
-                  <ActivityIndicator color={colors.primary} size="large" />
-                  <Text variant="body" tone="muted" style={{ marginTop: spacing.md }}>
-                    Loading budgets…
-                  </Text>
-                </View>
-              ) : budgets.length === 0 && folders.length === 0 && !searching ? (
+              {budgets.length === 0 && folders.length === 0 && !searching && !isLoading ? (
                 <EmptyState
                   icon="folder"
                   title="No budgets yet"
@@ -856,7 +850,7 @@ export default function BudgetsScreen() {
                   ) : null}
                 </>
               ) : (
-                <>
+                <BudgetarianSkeleton name="budgets-list" loading={isLoading && budgets.length === 0}>
                   {/* Any touch inside the list region dismisses a stray open
                       swipe row (taps on the row itself are handled by its own
                       close overlay) — same pattern as the budget detail. */}
@@ -949,7 +943,7 @@ export default function BudgetsScreen() {
                       </Pressable>
                     </View>
                   ) : null}
-                </>
+                </BudgetarianSkeleton>
               )}
             </Screen>
 

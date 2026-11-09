@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { DocumentPreview } from '../../components/budgets/DocumentPreview';
+import { BudgetarianSkeleton } from '../../components/skeletons/BudgetarianSkeleton';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { DatePicker } from '../../components/dates/DatePicker';
@@ -91,12 +92,17 @@ function ExportBody({ budgetId, onRetry }) {
   if (status === 'loading' || status === 'idle') {
     return (
       <Screen topInset>
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.primary} size="large" />
-          <Text variant="body" tone="muted" style={{ marginTop: spacing.md }}>
-            Reading this budget…
-          </Text>
-        </View>
+        <BudgetarianSkeleton name="export-loading" loading>
+          <View style={{ gap: spacing.lg }}>
+            <View style={{ height: 24, width: 180, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+            <View style={{ height: 14, width: 250, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+            <View style={{ gap: spacing.md, marginTop: spacing.lg }}>
+              <View style={{ height: 80, backgroundColor: colors.surfaceMuted, borderRadius: 12 }} />
+              <View style={{ height: 80, backgroundColor: colors.surfaceMuted, borderRadius: 12 }} />
+              <View style={{ height: 80, backgroundColor: colors.surfaceMuted, borderRadius: 12 }} />
+            </View>
+          </View>
+        </BudgetarianSkeleton>
       </Screen>
     );
   }

@@ -1,12 +1,13 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BarChart } from "../../components/reports/BarChart";
 import { DateRangeSheet } from "../../components/reports/DateRangeSheet";
 import { ExpenseTrendChart } from "../../components/reports/ExpenseTrendChart";
 import { PieChart } from "../../components/reports/PieChart";
+import { BudgetarianSkeleton } from "../../components/skeletons/BudgetarianSkeleton";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Screen, SectionHeader } from "../../components/ui/Screen";
@@ -69,14 +70,10 @@ export default function ReportsScreen() {
           </Text>
         ) : null}
 
-        {isLoading && summary.transactionCount === 0 ? (
-          <View style={styles.loading}>
-            <ActivityIndicator color={colors.primary} size="large" />
-            <Text variant="body" tone="muted" style={{ marginTop: spacing.md }}>
-              Loading reports…
-            </Text>
-          </View>
-        ) : (
+        <BudgetarianSkeleton
+          name="reports-content"
+          loading={isLoading && summary.transactionCount === 0}
+        >
           <View style={{ marginTop: spacing.lg, gap: spacing.lg }}>
             <Card>
               <View style={styles.summaryRow}>
@@ -177,7 +174,7 @@ export default function ReportsScreen() {
               </Card>
             </View>
           </View>
-        )}
+        </BudgetarianSkeleton>
       </Screen>
 
       {/* Sticky bottom filter bar: pinned outside the ScrollView, so the
@@ -246,7 +243,6 @@ const styles = StyleSheet.create({
   filterBar: {
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  loading: { alignItems: "center", paddingVertical: 48 },
   summaryRow: { flexDirection: "row" },
   rangeRow: { alignItems: "center", flexDirection: "row", gap: 12, justifyContent: "space-between" },
   trendHead: {

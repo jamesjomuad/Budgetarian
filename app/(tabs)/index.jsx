@@ -1,7 +1,8 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
+import { BudgetarianSkeleton } from "../../components/skeletons/BudgetarianSkeleton";
 import { TransactionRow } from "../../components/transactions/TransactionRow";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -296,20 +297,11 @@ export default function HomeScreen() {
   // A refresh that fails while data is already on screen must not wipe the
   // dashboard; it surfaces as a non-blocking banner instead.
   const staleError = Boolean(error) && !failed;
-  const ready = !loadingFirst && !failed && !nothingYet;
+  const ready = !failed && !nothingYet;
 
   return (
     <Screen topInset refreshing={refreshing} onRefresh={refresh}>
       <SectionHeader title={range ? `Overview · ${range.label}` : "Overview"} />
-
-      {loadingFirst ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} size="large" />
-          <Text variant="body" tone="muted" style={{ marginTop: spacing.md }}>
-            Loading insights…
-          </Text>
-        </View>
-      ) : null}
 
       {failed ? (
         <EmptyState
@@ -355,279 +347,287 @@ export default function HomeScreen() {
 
       {ready ? (
         <View style={{ gap: spacing.lg }}>
-          <Card>
-            <Text variant="label" tone="muted">
-              Remaining
-            </Text>
-            <Text
-              variant="title"
-              tone={remainingTotal < 0 ? "expense" : "default"}
-              style={{ marginTop: spacing.xs }}
-            >
-              {formatCurrency(remainingTotal, { currency })}
-            </Text>
-            <Text variant="caption" tone="muted" style={{ marginTop: spacing.xs }}>
-              {budgets.length === 1
-                ? "Across 1 active budget"
-                : `Across ${budgets.length} active budgets`}
-            </Text>
+          <BudgetarianSkeleton name="dashboard-summary" loading={loadingFirst}>
+            <Card>
+              <Text variant="label" tone="muted">
+                Remaining
+              </Text>
+              <Text
+                variant="title"
+                tone={remainingTotal < 0 ? "expense" : "default"}
+                style={{ marginTop: spacing.xs }}
+              >
+                {formatCurrency(remainingTotal, { currency })}
+              </Text>
+              <Text variant="caption" tone="muted" style={{ marginTop: spacing.xs }}>
+                {budgets.length === 1
+                  ? "Across 1 active budget"
+                  : `Across ${budgets.length} active budgets`}
+              </Text>
 
-            <View
-              style={[
-                styles.summaryRow,
-                {
-                  borderTopColor: colors.border,
-                  marginTop: spacing.md,
-                  paddingTop: spacing.md,
-                },
-              ]}
-            >
-              <Stat
-                label="Income"
-                value={formatCurrency(totals.income, { currency })}
-                tone="income"
-              />
-              <Stat
-                label="Expenses"
-                value={formatCurrency(totals.expense, { currency })}
-                tone="expense"
-              />
-            </View>
+              <View
+                style={[
+                  styles.summaryRow,
+                  {
+                    borderTopColor: colors.border,
+                    marginTop: spacing.md,
+                    paddingTop: spacing.md,
+                  },
+                ]}
+              >
+                <Stat
+                  label="Income"
+                  value={formatCurrency(totals.income, { currency })}
+                  tone="income"
+                />
+                <Stat
+                  label="Expenses"
+                  value={formatCurrency(totals.expense, { currency })}
+                  tone="expense"
+                />
+              </View>
 
-            <Text variant="caption" tone="faint" style={{ marginTop: spacing.sm }}>
-              Income received and expenses paid in {range?.label ?? "this month"}. Unpaid entries
-              are counted only when they settle. Archived budgets are not included.
-            </Text>
-          </Card>
+              <Text variant="caption" tone="faint" style={{ marginTop: spacing.sm }}>
+                Income received and expenses paid in {range?.label ?? "this month"}. Unpaid entries
+                are counted only when they settle. Archived budgets are not included.
+              </Text>
+            </Card>
+          </BudgetarianSkeleton>
 
           {attention.length > 0 ? (
+            <BudgetarianSkeleton name="dashboard-attention" loading={loadingFirst}>
+              <View>
+                <SectionHeader title="Needs Attention" />
+                <Card padded={false}>
+                  {attention.map((item, index) =>
+                    item.kind === "budget" ? (
+                      <BudgetAttentionRow
+                        key={`budget-${item.budget.id}`}
+                        row={item}
+                        currency={currency}
+                        isFirst={index === 0}
+                        onPress={openBudget}
+                      />
+                    ) : (
+                      <OverduePaymentRow
+                        key={`payment-${item.entry.id}`}
+                        entry={item.entry}
+                        currency={currency}
+                        isFirst={index === 0}
+                        onPress={openTransaction}
+                      />
+                    ),
+                  )}
+                  {attentionAll.length > ATTENTION_LIMIT ? (
+                    <ShowAllRow
+                      count={attentionAll.length}
+                      expanded={showAllAttention}
+                      noun="items needing attention"
+                      onPress={() => setShowAllAttention((value) => !value)}
+                    />
+                  ) : null}
+                </Card>
+              </View>
+            </BudgetarianSkeleton>
+          ) : null}
+
+          <BudgetarianSkeleton name="dashboard-upcoming" loading={loadingFirst}>
             <View>
-              <SectionHeader title="Needs Attention" />
+              <SectionHeader title="Upcoming" />
               <Card padded={false}>
-                {attention.map((item, index) =>
-                  item.kind === "budget" ? (
-                    <BudgetAttentionRow
-                      key={`budget-${item.budget.id}`}
-                      row={item}
-                      currency={currency}
-                      isFirst={index === 0}
-                      onPress={openBudget}
-                    />
-                  ) : (
-                    <OverduePaymentRow
-                      key={`payment-${item.entry.id}`}
-                      entry={item.entry}
-                      currency={currency}
-                      isFirst={index === 0}
-                      onPress={openTransaction}
-                    />
-                  ),
+                <View style={[styles.groupHead, { borderBottomColor: colors.border }]}>
+                  <Text variant="caption" tone="muted">
+                    Payments due
+                  </Text>
+                  <Text variant="caption" tone="faint">
+                    Next 30 days
+                  </Text>
+                </View>
+
+                {duePayments.length === 0 ? (
+                  <Text variant="caption" tone="faint" style={{ padding: spacing.lg }}>
+                    Nothing is due in the next 30 days.
+                  </Text>
+                ) : (
+                  duePayments.map((entry, index) => {
+                    const status = derivePaymentEventStatus(entry, today);
+                    return (
+                      <Pressable
+                        key={entry.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${entry.description || "Payment"}, ${
+                          PAYMENT_EVENT_LABELS[status]
+                        }, due ${formatShortDate(entry.payment_due_date)}, ${formatCurrency(entry.amount, {
+                          currency,
+                        })}`}
+                        onPress={() => openTransaction(entry)}
+                        style={({ pressed }) => [
+                          styles.row,
+                          styles.rowCenter,
+                          { padding: spacing.lg },
+                          index > 0 && {
+                            borderTopWidth: StyleSheet.hairlineWidth,
+                            borderTopColor: colors.border,
+                          },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Icon name="calendar" size={18} color={colors.warning} />
+                        <View style={styles.grow}>
+                          <Text variant="body" numberOfLines={1}>
+                            {entry.description || "Payment"}
+                          </Text>
+                          <Text variant="caption" tone="muted" style={styles.reason}>
+                            Due {formatShortDate(entry.payment_due_date)}
+                          </Text>
+                        </View>
+                        <View style={styles.trailing}>
+                          <Text
+                            variant="caption"
+                            style={{
+                              color: status === "dueToday" ? colors.warning : colors.textMuted,
+                            }}
+                          >
+                            {PAYMENT_EVENT_LABELS[status]}
+                          </Text>
+                          <Text variant="body" style={[styles.amount, styles.statusRight]}>
+                            {formatCurrency(entry.amount, { currency })}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })
                 )}
-                {attentionAll.length > ATTENTION_LIMIT ? (
+
+                {duePaymentsAll.length > UPCOMING_LIMIT ? (
                   <ShowAllRow
-                    count={attentionAll.length}
-                    expanded={showAllAttention}
-                    noun="items needing attention"
-                    onPress={() => setShowAllAttention((value) => !value)}
+                    count={duePaymentsAll.length}
+                    expanded={showAllPayments}
+                    noun="payments due"
+                    onPress={() => setShowAllPayments((value) => !value)}
+                  />
+                ) : null}
+
+                <View
+                  style={[
+                    styles.groupHead,
+                    {
+                      borderTopColor: colors.border,
+                      borderTopWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Text variant="caption" tone="muted">
+                    Reminders
+                  </Text>
+                  <Text variant="caption" tone="faint">
+                    Next 30 days
+                  </Text>
+                </View>
+
+                {dueReminders.length === 0 ? (
+                  <Text variant="caption" tone="faint" style={{ padding: spacing.lg }}>
+                    No reminders scheduled.
+                  </Text>
+                ) : (
+                  dueReminders.map((reminder, index) => {
+                    const status = deriveReminderStatus(reminder);
+                    return (
+                      <Pressable
+                        key={reminder.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${reminder.notes || reminder.description || "Reminder"}, ${
+                          REMINDER_STATUS_LABELS[status]
+                        }, ${formatShortDate(reminder.remind_date)} ${formatTime(reminder.remind_time)}`}
+                        onPress={() => openReminder(reminder)}
+                        style={({ pressed }) => [
+                          styles.row,
+                          styles.rowCenter,
+                          { padding: spacing.lg },
+                          index > 0 && {
+                            borderTopWidth: StyleSheet.hairlineWidth,
+                            borderTopColor: colors.border,
+                          },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Icon name="clock" size={18} color={colors.warning} />
+                        <View style={styles.grow}>
+                          <Text variant="body" numberOfLines={1}>
+                            {reminder.notes || reminder.description || "Reminder"}
+                          </Text>
+                          <Text variant="caption" tone="muted" style={styles.reason}>
+                            {formatShortDate(reminder.remind_date)} ·{" "}
+                            {formatTime(reminder.remind_time)}
+                          </Text>
+                        </View>
+                        <View style={styles.trailing}>
+                          <Text
+                            variant="caption"
+                            style={{
+                              color: status === "overdue" ? colors.expense : colors.textMuted,
+                            }}
+                          >
+                            {REMINDER_STATUS_LABELS[status]}
+                          </Text>
+                          {reminder.amount == null ? null : (
+                            <Text variant="body" style={[styles.amount, styles.statusRight]}>
+                              {formatCurrency(reminder.amount, { currency })}
+                            </Text>
+                          )}
+                        </View>
+                      </Pressable>
+                    );
+                  })
+                )}
+
+                {upcomingReminders.length > UPCOMING_LIMIT ? (
+                  <ShowAllRow
+                    count={upcomingReminders.length}
+                    expanded={showAllReminders}
+                    noun="reminders"
+                    onPress={() => setShowAllReminders((value) => !value)}
                   />
                 ) : null}
               </Card>
             </View>
-          ) : null}
-
-          <View>
-            <SectionHeader title="Upcoming" />
-            <Card padded={false}>
-              <View style={[styles.groupHead, { borderBottomColor: colors.border }]}>
-                <Text variant="caption" tone="muted">
-                  Payments due
-                </Text>
-                <Text variant="caption" tone="faint">
-                  Next 30 days
-                </Text>
-              </View>
-
-              {duePayments.length === 0 ? (
-                <Text variant="caption" tone="faint" style={{ padding: spacing.lg }}>
-                  Nothing is due in the next 30 days.
-                </Text>
-              ) : (
-                duePayments.map((entry, index) => {
-                  const status = derivePaymentEventStatus(entry, today);
-                  return (
-                    <Pressable
-                      key={entry.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${entry.description || "Payment"}, ${
-                        PAYMENT_EVENT_LABELS[status]
-                      }, due ${formatShortDate(entry.payment_due_date)}, ${formatCurrency(entry.amount, {
-                        currency,
-                      })}`}
-                      onPress={() => openTransaction(entry)}
-                      style={({ pressed }) => [
-                        styles.row,
-                        styles.rowCenter,
-                        { padding: spacing.lg },
-                        index > 0 && {
-                          borderTopWidth: StyleSheet.hairlineWidth,
-                          borderTopColor: colors.border,
-                        },
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Icon name="calendar" size={18} color={colors.warning} />
-                      <View style={styles.grow}>
-                        <Text variant="body" numberOfLines={1}>
-                          {entry.description || "Payment"}
-                        </Text>
-                        <Text variant="caption" tone="muted" style={styles.reason}>
-                          Due {formatShortDate(entry.payment_due_date)}
-                        </Text>
-                      </View>
-                      <View style={styles.trailing}>
-                        <Text
-                          variant="caption"
-                          style={{
-                            color: status === "dueToday" ? colors.warning : colors.textMuted,
-                          }}
-                        >
-                          {PAYMENT_EVENT_LABELS[status]}
-                        </Text>
-                        <Text variant="body" style={[styles.amount, styles.statusRight]}>
-                          {formatCurrency(entry.amount, { currency })}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })
-              )}
-
-              {duePaymentsAll.length > UPCOMING_LIMIT ? (
-                <ShowAllRow
-                  count={duePaymentsAll.length}
-                  expanded={showAllPayments}
-                  noun="payments due"
-                  onPress={() => setShowAllPayments((value) => !value)}
-                />
-              ) : null}
-
-              <View
-                style={[
-                  styles.groupHead,
-                  {
-                    borderTopColor: colors.border,
-                    borderTopWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: colors.border,
-                  },
-                ]}
-              >
-                <Text variant="caption" tone="muted">
-                  Reminders
-                </Text>
-                <Text variant="caption" tone="faint">
-                  Next 30 days
-                </Text>
-              </View>
-
-              {dueReminders.length === 0 ? (
-                <Text variant="caption" tone="faint" style={{ padding: spacing.lg }}>
-                  No reminders scheduled.
-                </Text>
-              ) : (
-                dueReminders.map((reminder, index) => {
-                  const status = deriveReminderStatus(reminder);
-                  return (
-                    <Pressable
-                      key={reminder.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${reminder.notes || reminder.description || "Reminder"}, ${
-                        REMINDER_STATUS_LABELS[status]
-                      }, ${formatShortDate(reminder.remind_date)} ${formatTime(reminder.remind_time)}`}
-                      onPress={() => openReminder(reminder)}
-                      style={({ pressed }) => [
-                        styles.row,
-                        styles.rowCenter,
-                        { padding: spacing.lg },
-                        index > 0 && {
-                          borderTopWidth: StyleSheet.hairlineWidth,
-                          borderTopColor: colors.border,
-                        },
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Icon name="clock" size={18} color={colors.warning} />
-                      <View style={styles.grow}>
-                        <Text variant="body" numberOfLines={1}>
-                          {reminder.notes || reminder.description || "Reminder"}
-                        </Text>
-                        <Text variant="caption" tone="muted" style={styles.reason}>
-                          {formatShortDate(reminder.remind_date)} ·{" "}
-                          {formatTime(reminder.remind_time)}
-                        </Text>
-                      </View>
-                      <View style={styles.trailing}>
-                        <Text
-                          variant="caption"
-                          style={{
-                            color: status === "overdue" ? colors.expense : colors.textMuted,
-                          }}
-                        >
-                          {REMINDER_STATUS_LABELS[status]}
-                        </Text>
-                        {reminder.amount == null ? null : (
-                          <Text variant="body" style={[styles.amount, styles.statusRight]}>
-                            {formatCurrency(reminder.amount, { currency })}
-                          </Text>
-                        )}
-                      </View>
-                    </Pressable>
-                  );
-                })
-              )}
-
-              {upcomingReminders.length > UPCOMING_LIMIT ? (
-                <ShowAllRow
-                  count={upcomingReminders.length}
-                  expanded={showAllReminders}
-                  noun="reminders"
-                  onPress={() => setShowAllReminders((value) => !value)}
-                />
-              ) : null}
-            </Card>
-          </View>
+          </BudgetarianSkeleton>
 
           {recent.length > 0 ? (
-            <View>
-              <SectionHeader
-                title="Recent Transactions"
-                action={
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Open the Budgets tab"
-                    onPress={() => router.push("/budgets")}
-                    hitSlop={14}
-                    style={({ pressed }) => [pressed && styles.pressed]}
-                  >
-                    <Text variant="caption" tone="primary">
-                      Budgets
-                    </Text>
-                  </Pressable>
-                }
-              />
-              <Card padded={false}>
-                {recent.map((transaction, index) => (
-                  <TransactionRow
-                    key={transaction.id}
-                    transaction={transaction}
-                    tag={tagById.get(transaction.tag_id) ?? null}
-                    currency={currency}
-                    isFirst={index === 0}
-                    isLast={index === recent.length - 1}
-                    onEdit={openTransaction}
-                  />
-                ))}
-              </Card>
-            </View>
+            <BudgetarianSkeleton name="dashboard-recent" loading={loadingFirst}>
+              <View>
+                <SectionHeader
+                  title="Recent Transactions"
+                  action={
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Open the Budgets tab"
+                      onPress={() => router.push("/budgets")}
+                      hitSlop={14}
+                      style={({ pressed }) => [pressed && styles.pressed]}
+                    >
+                      <Text variant="caption" tone="primary">
+                        Budgets
+                      </Text>
+                    </Pressable>
+                  }
+                />
+                <Card padded={false}>
+                  {recent.map((transaction, index) => (
+                    <TransactionRow
+                      key={transaction.id}
+                      transaction={transaction}
+                      tag={tagById.get(transaction.tag_id) ?? null}
+                      currency={currency}
+                      isFirst={index === 0}
+                      isLast={index === recent.length - 1}
+                      onEdit={openTransaction}
+                    />
+                  ))}
+                </Card>
+              </View>
+            </BudgetarianSkeleton>
           ) : null}
         </View>
       ) : null}

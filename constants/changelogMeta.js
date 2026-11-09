@@ -17,9 +17,29 @@ export const changelogSections = [
     "unreleased": true,
     "categories": [
       {
+        "title": "Added",
+        "items": [
+          "Added transaction cloning."
+        ]
+      },
+      {
+        "title": "Improved",
+        "items": [
+          "Improved loading screens with skeleton placeholders instead of spinners.",
+          "Updated app screenshots."
+        ]
+      },
+      {
         "title": "Fixed",
         "items": [
-          "Fixed Android reminder Complete action to open the linked transaction instead of its budget."
+          "Fixed reminder time defaulting to current device time instead of 9 AM."
+        ]
+      },
+      {
+        "title": "Fixed",
+        "items": [
+          "Fixed Android reminder Complete action to open the linked transaction instead of its budget.",
+          "Removed hard-to-read date range text from the budget detail Remaining card in light theme."
         ]
       },
       {

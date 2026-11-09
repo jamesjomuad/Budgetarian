@@ -1,10 +1,11 @@
 import { Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { SelectionCheckbox } from '../components/selection/SelectionCheckbox';
 import { SelectionWrapper } from '../components/selection/SelectionWrapper';
 import { BudgetDetailSheet } from '../components/budgets/BudgetDetailSheet';
+import { BudgetarianSkeleton } from '../components/skeletons/BudgetarianSkeleton';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -33,7 +34,7 @@ import { formatDate, formatDateRange } from '../utils/dates';
  * ever address budgets that are already in Archive.
  */
 export default function ArchiveScreen() {
-  const { colors, spacing } = useTheme();
+  const { spacing } = useTheme();
   const currency = useSettingsStore((state) => state.currency);
 
   const archivedBudgets = useBudgetsStore((state) => state.archivedBudgets);
@@ -231,11 +232,7 @@ export default function ArchiveScreen() {
             refreshing={busy && archivedBudgets.length > 0}
             onRefresh={refresh}
           >
-            {showLoading ? (
-              <View style={styles.centered}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : showError ? (
+            {showError ? (
               <EmptyState
                 icon="archive"
                 title="Could not load the archive"
@@ -243,40 +240,47 @@ export default function ArchiveScreen() {
               >
                 <Button label="Try again" icon="refresh" onPress={refresh} />
               </EmptyState>
-            ) : archivedBudgets.length === 0 ? (
-              <EmptyState
-                icon="archive"
-                title="Nothing archived"
-                description="Budgets you remove from the budget list land here. Every transaction, tag and reminder is kept — restore one whenever you like."
-              />
             ) : (
-              <>
-                <SectionHeader
-                  title={`Archived · ${archivedBudgets.length}`}
-                  inlineAction={sel.masterRow}
-                />
-                <Card padded={false} style={{ marginBottom: spacing.sm }}>
-                  {archivedBudgets.map((budget, index) => (
-                    <ArchivedBudgetRow
-                      key={budget.id}
-                      budget={budget}
-                      currency={currency}
-                      isLast={index === archivedBudgets.length - 1}
-                      busy={pendingId === budget.id}
-                      selectable={sel.selectionMode}
-                      selected={sel.isSelected(budget.id)}
-                      onToggleSelect={sel.toggleItem}
-                      onOpen={setDetailBudget}
-                      onRestore={handleRestore}
-                      onDelete={handleDelete}
+              <BudgetarianSkeleton
+                name="archive-list"
+                loading={showLoading}
+              >
+                {archivedBudgets.length === 0 ? (
+                  <EmptyState
+                    icon="archive"
+                    title="Nothing archived"
+                    description="Budgets you remove from the budget list land here. Every transaction, tag and reminder is kept — restore one whenever you like."
+                  />
+                ) : (
+                  <>
+                    <SectionHeader
+                      title={`Archived · ${archivedBudgets.length}`}
+                      inlineAction={sel.masterRow}
                     />
-                  ))}
-                </Card>
-                <Text variant="caption" tone="faint" style={styles.note}>
-                  Archived budgets keep all of their data. Restoring returns a budget to its folder, or to
-                  the root list when that folder no longer exists.
-                </Text>
-              </>
+                    <Card padded={false} style={{ marginBottom: spacing.sm }}>
+                      {archivedBudgets.map((budget, index) => (
+                        <ArchivedBudgetRow
+                          key={budget.id}
+                          budget={budget}
+                          currency={currency}
+                          isLast={index === archivedBudgets.length - 1}
+                          busy={pendingId === budget.id}
+                          selectable={sel.selectionMode}
+                          selected={sel.isSelected(budget.id)}
+                          onToggleSelect={sel.toggleItem}
+                          onOpen={setDetailBudget}
+                          onRestore={handleRestore}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </Card>
+                    <Text variant="caption" tone="faint" style={styles.note}>
+                      Archived budgets keep all of their data. Restoring returns a budget to its folder, or to
+                      the root list when that folder no longer exists.
+                    </Text>
+                  </>
+                )}
+              </BudgetarianSkeleton>
             )}
           </Screen>
           {sel.selectionMode ? sel.toolbar : null}

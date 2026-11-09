@@ -1,6 +1,6 @@
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BudgetCard } from '../../components/budgets/BudgetCard';
@@ -8,6 +8,7 @@ import { BudgetDetailSheet } from '../../components/budgets/BudgetDetailSheet';
 import { FolderPickerSheet } from '../../components/budgets/FolderPickerSheet';
 import { DraggableRows } from '../../components/lists/DraggableRows';
 import { SelectionWrapper } from '../../components/selection/SelectionWrapper';
+import { BudgetarianSkeleton } from '../../components/skeletons/BudgetarianSkeleton';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -245,9 +246,26 @@ export default function FolderDetailScreen() {
 
   if (isLoadingFolders && !folder) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+      <View style={[styles.fill, { backgroundColor: colors.background }]}>
         <Stack.Screen options={{ title: 'Folder…' }} />
-        <ActivityIndicator color={colors.primary} size="large" />
+        <Screen topInset={false} bottomSpace={FAB_SIZE + spacing.xl}>
+          <BudgetarianSkeleton name="folder-detail-loading" loading>
+            <View style={{ gap: spacing.lg }}>
+              <View style={[styles.metaRow, { gap: spacing.sm }]}>
+                <View style={[styles.swatch, { backgroundColor: colors.surfaceMuted }]} />
+                <View style={{ height: 16, flex: 1, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+              </View>
+              <View style={{ height: 20, width: 120, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
+              <Card padded={false}>
+                <View style={{ padding: spacing.lg, gap: spacing.md }}>
+                  <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
+                  <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
+                  <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
+                </View>
+              </Card>
+            </View>
+          </BudgetarianSkeleton>
+        </Screen>
       </View>
     );
   }
