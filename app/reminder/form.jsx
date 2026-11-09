@@ -84,7 +84,13 @@ export default function ReminderFormScreen() {
       isValidLocalDate(paramDate) && !reminderValidationError(paramDate, suggested.time);
     return usable ? paramDate : suggested.date;
   });
-  const [time, setTime] = useState(() => (editing ? '' : suggestReminderValues().time));
+  const [time, setTime] = useState(() => {
+    if (editing) return '';
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
   const [notes, setNotes] = useState('');
   const [transactionId, setTransactionId] = useState(paramTransactionId);
   const [linkedTransaction, setLinkedTransaction] = useState(null);

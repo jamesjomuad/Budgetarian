@@ -39,7 +39,11 @@ export function PendingReminders({ value, onChange, permission, onOpenSettings }
   function openNew() {
     const suggestion = suggestReminderValues();
     setDraftDate(suggestion.date);
-    setDraftTime(suggestion.time);
+    // Use current device time instead of hardcoded 9 AM
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    setDraftTime(`${hours}:${minutes}`);
     setDraftNotes('');
     setError(null);
     setEditorId('new');

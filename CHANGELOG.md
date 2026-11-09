@@ -4,6 +4,12 @@ All notable user-facing changes to Budgetarian are documented here.
 
 ## [Unreleased]
 
+### Added
+- Added transaction cloning.
+
+### Fixed
+- Fixed reminder time defaulting to current device time instead of 9 AM.
+
 ### Fixed
 - Fixed Android reminder Complete action to open the linked transaction instead of its budget.
 - Removed hard-to-read date range text from the budget detail Remaining card in light theme.
