@@ -1622,3 +1622,174 @@ p {
 .mt-md { margin-top: var(--space-md); }
 .mt-lg { margin-top: var(--space-lg); }
 .mt-xl { margin-top: var(--space-xl); }
+
+/* ============================================================
+   Screenshot Modal / Lightbox
+   ============================================================ */
+
+/* Reset button styles for screenshot triggers */
+.screenshot-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  width: 100%;
+  display: block;
+  outline: none;
+  transition: transform var(--duration-normal) var(--ease-out),
+              opacity var(--duration-normal) var(--ease-out);
+}
+
+.screenshot-trigger:hover .screenshot-frame {
+  transform: scale(1.05);
+  box-shadow: 0 32px 80px rgba(32, 41, 35, 0.25);
+}
+
+.screenshot-trigger:focus-visible .screenshot-frame {
+  outline: 3px solid var(--sage);
+  outline-offset: 4px;
+}
+
+.screenshot-trigger:active .screenshot-frame {
+  transform: scale(0.98);
+}
+
+/* Modal overlay */
+.screenshot-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+}
+
+.screenshot-modal[hidden] {
+  display: none;
+}
+
+.screenshot-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(32, 41, 35, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: backdropFadeIn var(--duration-slow) var(--ease-out);
+}
+
+.screenshot-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: modalFadeIn var(--duration-slow) var(--ease-out);
+}
+
+.screenshot-modal-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.screenshot-modal-image {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
+  object-fit: contain;
+}
+
+.screenshot-modal-caption {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--white);
+  text-align: center;
+}
+
+.screenshot-modal-close {
+  position: absolute;
+  top: -50px;
+  right: -10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--white);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--duration-normal) var(--ease-out),
+              transform var(--duration-normal) var(--ease-out);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.screenshot-modal-close svg {
+  width: 20px;
+  height: 20px;
+  color: var(--evergreen);
+}
+
+.screenshot-modal-close:hover {
+  background: var(--soft-sage);
+  transform: scale(1.1);
+}
+
+.screenshot-modal-close:focus-visible {
+  outline: 3px solid var(--sage);
+  outline-offset: 2px;
+}
+
+/* Animations */
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .screenshot-modal {
+    padding: var(--space-sm);
+  }
+
+  .screenshot-modal-content {
+    max-width: 95vw;
+  }
+
+  .screenshot-modal-close {
+    top: -40px;
+    right: 0;
+  }
+
+  .screenshot-modal-image {
+    max-height: 75vh;
+  }
+
+  .screenshot-modal-caption {
+    font-size: var(--text-base);
+  }
+}

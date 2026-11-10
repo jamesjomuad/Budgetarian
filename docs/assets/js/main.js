@@ -145,4 +145,85 @@
       nextArrow: '<button type="button" class="slick-next" aria-label="Next screenshot"><span class="slick-arrow-text">&rsaquo;</span></button>',
     });
   }
+
+  // --- Screenshot modal / lightbox ---
+  (function initScreenshotModal() {
+    var modal = document.getElementById('screenshot-modal');
+    if (!modal) return;
+
+    var modalImage = modal.querySelector('.screenshot-modal-image');
+    var modalCaption = modal.querySelector('.screenshot-modal-caption');
+    var closeBtn = modal.querySelector('.screenshot-modal-close');
+    var backdrop = modal.querySelector('.screenshot-modal-backdrop');
+    var lastFocusedElement = null;
+
+    function openModal(imageSrc, caption, altText) {
+      lastFocusedElement = document.activeElement;
+      modalImage.src = imageSrc;
+      modalImage.alt = altText || caption || '';
+      modalCaption.textContent = caption || '';
+      modal.removeAttribute('hidden');
+      document.body.style.overflow = 'hidden';
+      // Focus the close button for keyboard users
+      setTimeout(function() {
+        closeBtn.focus();
+      }, 100);
+    }
+
+    function closeModal() {
+      modal.setAttribute('hidden', '');
+      document.body.style.overflow = '';
+      // Return focus to the trigger element
+      if (lastFocusedElement) {
+        lastFocusedElement.focus();
+      }
+    }
+
+    // Listen for clicks on screenshot triggers
+    document.querySelectorAll('.screenshot-trigger').forEach(function(trigger) {
+      trigger.addEventListener('click', function(e) {
+        e.preventDefault();
+        var imageSrc = trigger.getAttribute('data-image');
+        var caption = trigger.getAttribute('data-caption');
+        var img = trigger.querySelector('img');
+        var altText = img ? img.getAttribute('alt') : caption;
+        if (imageSrc) {
+          openModal(imageSrc, caption, altText);
+        }
+      });
+    });
+
+    // Close modal events
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
+
+    // Close on ESC key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !modal.hasAttribute('hidden')) {
+        closeModal();
+      }
+    });
+
+    // Trap focus within modal when open
+    modal.addEventListener('keydown', function(e) {
+      if (e.key !== 'Tab') return;
+      if (modal.hasAttribute('hidden')) return;
+
+      var focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      var firstFocusable = focusableElements[0];
+      var lastFocusable = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstFocusable) {
+          e.preventDefault();
+          lastFocusable.focus();
+        }
+      } else {
+        if (document.activeElement === lastFocusable) {
+          e.preventDefault();
+          firstFocusable.focus();
+        }
+      }
+    });
+  })();
 })();

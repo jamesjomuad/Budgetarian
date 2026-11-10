@@ -161,46 +161,77 @@
         </div>
         <div class="screenshots-carousel" data-reveal="scale" data-reveal-delay="2">
           <div class="screenshot-item">
-            <div class="screenshot-frame">
-              <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.07.844.png" alt="Home dashboard with overview, upcoming transactions, and recent activity" width="280" height="560" loading="lazy">
-            </div>
+            <button type="button" class="screenshot-trigger" data-image="./assets/images/screenshots/Screenshot_2026.11.09_11.54.07.844.png" data-caption="Home Dashboard" aria-label="View Home Dashboard screenshot in fullscreen">
+              <div class="screenshot-frame">
+                <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.07.844.png" alt="Home dashboard with overview, upcoming transactions, and recent activity" width="280" height="560" loading="lazy">
+              </div>
+            </button>
             <figcaption>Home Dashboard</figcaption>
           </div>
           <div class="screenshot-item">
-            <div class="screenshot-frame">
-              <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.12.943.png" alt="Budgets list with folders and budgets showing remaining balances" width="280" height="560" loading="lazy">
-            </div>
+            <button type="button" class="screenshot-trigger" data-image="./assets/images/screenshots/Screenshot_2026.11.09_11.54.12.943.png" data-caption="Your Budgets" aria-label="View Your Budgets screenshot in fullscreen">
+              <div class="screenshot-frame">
+                <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.12.943.png" alt="Budgets list with folders and budgets showing remaining balances" width="280" height="560" loading="lazy">
+              </div>
+            </button>
             <figcaption>Your Budgets</figcaption>
           </div>
           <div class="screenshot-item">
-            <div class="screenshot-frame">
-              <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.23.443.png" alt="Budget detail view with transactions grouped by date" width="280" height="560" loading="lazy">
-            </div>
+            <button type="button" class="screenshot-trigger" data-image="./assets/images/screenshots/Screenshot_2026.11.09_11.54.23.443.png" data-caption="Budget Detail" aria-label="View Budget Detail screenshot in fullscreen">
+              <div class="screenshot-frame">
+                <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.23.443.png" alt="Budget detail view with transactions grouped by date" width="280" height="560" loading="lazy">
+              </div>
+            </button>
             <figcaption>Budget Detail</figcaption>
           </div>
           <div class="screenshot-item">
-            <div class="screenshot-frame">
-              <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.37.893.png" alt="Calendar view with monthly grid and daily timeline" width="280" height="560" loading="lazy">
-            </div>
+            <button type="button" class="screenshot-trigger" data-image="./assets/images/screenshots/Screenshot_2026.11.09_11.54.37.893.png" data-caption="Calendar" aria-label="View Calendar screenshot in fullscreen">
+              <div class="screenshot-frame">
+                <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.37.893.png" alt="Calendar view with monthly grid and daily timeline" width="280" height="560" loading="lazy">
+              </div>
+            </button>
             <figcaption>Calendar</figcaption>
           </div>
           <div class="screenshot-item">
-            <div class="screenshot-frame">
-              <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.41.776.png" alt="Reports page with expenses over time and income vs expenses charts" width="280" height="560" loading="lazy">
-            </div>
+            <button type="button" class="screenshot-trigger" data-image="./assets/images/screenshots/Screenshot_2026.11.09_11.54.41.776.png" data-caption="Reports" aria-label="View Reports screenshot in fullscreen">
+              <div class="screenshot-frame">
+                <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.41.776.png" alt="Reports page with expenses over time and income vs expenses charts" width="280" height="560" loading="lazy">
+              </div>
+            </button>
             <figcaption>Reports</figcaption>
           </div>
           <div class="screenshot-item">
-            <div class="screenshot-frame">
-              <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.56.03.360.png" alt="Add transaction form with amount, type, status, and fields" width="280" height="560" loading="lazy">
-            </div>
+            <button type="button" class="screenshot-trigger" data-image="./assets/images/screenshots/Screenshot_2026.11.09_11.56.03.360.png" data-caption="Add Transaction" aria-label="View Add Transaction screenshot in fullscreen">
+              <div class="screenshot-frame">
+                <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.56.03.360.png" alt="Add transaction form with amount, type, status, and fields" width="280" height="560" loading="lazy">
+              </div>
+            </button>
             <figcaption>Add Transaction</figcaption>
           </div>
           <div class="screenshot-item">
-            <div class="screenshot-frame">
-              <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.44.926.png" alt="Settings screen with appearance, currency, and tags" width="280" height="560" loading="lazy">
-            </div>
+            <button type="button" class="screenshot-trigger" data-image="./assets/images/screenshots/Screenshot_2026.11.09_11.54.44.926.png" data-caption="Settings" aria-label="View Settings screenshot in fullscreen">
+              <div class="screenshot-frame">
+                <img src="./assets/images/screenshots/Screenshot_2026.11.09_11.54.44.926.png" alt="Settings screen with appearance, currency, and tags" width="280" height="560" loading="lazy">
+              </div>
+            </button>
             <figcaption>Settings</figcaption>
+          </div>
+        </div>
+
+        <!-- Screenshot Modal -->
+        <div id="screenshot-modal" class="screenshot-modal" role="dialog" aria-modal="true" aria-labelledby="screenshot-modal-caption" hidden>
+          <div class="screenshot-modal-backdrop"></div>
+          <div class="screenshot-modal-content">
+            <button type="button" class="screenshot-modal-close" aria-label="Close screenshot viewer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+            <figure class="screenshot-modal-figure">
+              <img src="" alt="" class="screenshot-modal-image">
+              <figcaption id="screenshot-modal-caption" class="screenshot-modal-caption"></figcaption>
+            </figure>
           </div>
         </div>
       </div>
