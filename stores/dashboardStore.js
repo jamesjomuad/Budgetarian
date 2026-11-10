@@ -51,8 +51,6 @@ export const useDashboardStore = create((set, get) => ({
       return;
     }
     set({ isLoading: true, error: null });
-    // Debug: artificial delay to make skeleton loaders visible during navigation
-    await new Promise((resolve) => setTimeout(resolve, 500));
     try {
       const monthKey = currentMonthKey();
       const { start, end } = monthRange(monthKey);

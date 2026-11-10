@@ -50,8 +50,6 @@ export const useBudgetsStore = create((set, get) => ({
       return;
     }
     set({ isLoading: true, error: null });
-    // Debug: artificial delay to make skeleton loaders visible during navigation
-    await new Promise((resolve) => setTimeout(resolve, 500));
     try {
       const [budgets, archivedBudgets, pinned] = await Promise.all([
         getBudgets(),
@@ -75,8 +73,6 @@ export const useBudgetsStore = create((set, get) => ({
   /** Refresh only the archive list (Archive screen focus). */
   loadArchived: async () => {
     set({ isArchiveLoading: true });
-    // Debug: artificial delay to make skeleton loaders visible during navigation
-    await new Promise((resolve) => setTimeout(resolve, 500));
     try {
       const archivedBudgets = await getArchivedBudgets();
       set({ archivedBudgets, isArchiveLoading: false, archiveLastLoadedAt: Date.now() });
