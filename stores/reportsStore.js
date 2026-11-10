@@ -77,6 +77,9 @@ export const useReportsStore = create((set, get) => ({
     }
     set({ isLoading: true, error: null, filter });
 
+    // Debug: artificial delay to make skeleton loaders visible during navigation
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     try {
       const period = periodRange(filter, get().custom);
       const [rows, tags, events] = await Promise.all([
