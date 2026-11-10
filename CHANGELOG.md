@@ -4,6 +4,8 @@ All notable user-facing changes to Budgetarian are documented here.
 
 ## [Unreleased]
 
+# v1.2.0 — 2026-11-10
+
 ### Added
 - Added transaction cloning.
 
