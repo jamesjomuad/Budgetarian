@@ -2,6 +2,9 @@ import { Skeleton } from 'boneyard-js/native';
 
 import { useTheme } from '../ui/ThemeProvider';
 
+// Import bone definitions to register them with Boneyard.
+import './bones';
+
 /**
  * Theme-aware skeleton wrapper for Budgetarian.
  * Wraps Boneyard's Skeleton and passes theme-appropriate colors.
@@ -15,7 +18,6 @@ export function BudgetarianSkeleton({
   name,
   loading,
   children,
-  fixture,
   style,
   animate = 'pulse',
   transition = 300,
@@ -35,7 +37,6 @@ export function BudgetarianSkeleton({
       animate={animate}
       transition={transition}
       stagger={stagger}
-      fixture={fixture}
       fallback={fallback}
       style={style}
     >
