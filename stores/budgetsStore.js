@@ -35,6 +35,8 @@ import { useDashboardStore } from './dashboardStore';
 export const useBudgetsStore = create((set, get) => ({
   budgets: [],
   archivedBudgets: [],
+  isArchiveLoading: false,
+  archiveLastLoadedAt: null,
   pinnedIds: [],
   isLoading: true,
   error: null,
@@ -70,8 +72,13 @@ export const useBudgetsStore = create((set, get) => ({
 
   /** Refresh only the archive list (Archive screen focus). */
   loadArchived: async () => {
-    const archivedBudgets = await getArchivedBudgets();
-    set({ archivedBudgets });
+    set({ isArchiveLoading: true });
+    try {
+      const archivedBudgets = await getArchivedBudgets();
+      set({ archivedBudgets, isArchiveLoading: false, archiveLastLoadedAt: Date.now() });
+    } catch (error) {
+      set({ error, isArchiveLoading: false });
+    }
   },
 
   /** Archive the selection: budgets leave every active list, data untouched. */

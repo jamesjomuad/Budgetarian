@@ -50,6 +50,7 @@ export default function ReportsScreen() {
   const trend = useReportsStore((state) => state.trend);
   const trendView = useReportsStore((state) => state.trendView);
   const isLoading = useReportsStore((state) => state.isLoading);
+  const lastLoadedAt = useReportsStore((state) => state.lastLoadedAt);
   const error = useReportsStore((state) => state.error);
   const load = useReportsStore((state) => state.load);
   const setFilter = useReportsStore((state) => state.setFilter);
@@ -72,7 +73,7 @@ export default function ReportsScreen() {
 
         <BudgetarianSkeleton
           name="reports-content"
-          loading={isLoading && summary.transactionCount === 0}
+          loading={isLoading && !lastLoadedAt}
         >
           <View style={{ marginTop: spacing.lg, gap: spacing.lg }}>
             <Card>

@@ -38,6 +38,8 @@ export default function ArchiveScreen() {
   const currency = useSettingsStore((state) => state.currency);
 
   const archivedBudgets = useBudgetsStore((state) => state.archivedBudgets);
+  const isArchiveLoading = useBudgetsStore((state) => state.isArchiveLoading);
+  const archiveLastLoadedAt = useBudgetsStore((state) => state.archiveLastLoadedAt);
   const error = useBudgetsStore((state) => state.error);
   const loadArchived = useBudgetsStore((state) => state.loadArchived);
   const restoreArchived = useBudgetsStore((state) => state.restoreArchived);
@@ -213,7 +215,7 @@ export default function ArchiveScreen() {
     [restoreSelection, confirmBulkDelete],
   );
 
-  const showLoading = busy && archivedBudgets.length === 0;
+  const showLoading = isArchiveLoading && !archiveLastLoadedAt;
   const showError = Boolean(error) && archivedBudgets.length === 0;
 
   return (

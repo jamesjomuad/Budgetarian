@@ -9,17 +9,14 @@ All notable user-facing changes to Budgetarian are documented here.
 
 ### Improved
 - Improved loading screens with skeleton placeholders instead of spinners.
+- Improved skeleton loader visibility on initial app load.
 - Updated app screenshots.
+- Improved tab switching speed by skipping redundant data reloads.
 
 ### Fixed
 - Fixed reminder time defaulting to current device time instead of 9 AM.
-
-### Fixed
 - Fixed Android reminder Complete action to open the linked transaction instead of its budget.
 - Removed hard-to-read date range text from the budget detail Remaining card in light theme.
-
-### Improved
-- Improved tab switching speed by skipping redundant data reloads.
 
 # v1.1.0 — 2026-11-09
 

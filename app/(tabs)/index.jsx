@@ -179,6 +179,7 @@ export default function HomeScreen() {
   const currency = useSettingsStore((state) => state.currency);
 
   const isLoading = useDashboardStore((state) => state.isLoading);
+  const lastLoadedAt = useDashboardStore((state) => state.lastLoadedAt);
   const error = useDashboardStore((state) => state.error);
   const range = useDashboardStore((state) => state.range);
   const monthTransactions = useDashboardStore((state) => state.monthTransactions);
@@ -292,7 +293,7 @@ export default function HomeScreen() {
   );
 
   const nothingYet = budgets.length === 0 && recent.length === 0;
-  const loadingFirst = isLoading && recent.length === 0;
+  const loadingFirst = isLoading && !lastLoadedAt;
   const failed = Boolean(error) && recent.length === 0;
   // A refresh that fails while data is already on screen must not wipe the
   // dashboard; it surfaces as a non-blocking banner instead.

@@ -26,26 +26,17 @@ export const changelogSections = [
         "title": "Improved",
         "items": [
           "Improved loading screens with skeleton placeholders instead of spinners.",
-          "Updated app screenshots."
+          "Improved skeleton loader visibility on initial app load.",
+          "Updated app screenshots.",
+          "Improved tab switching speed by skipping redundant data reloads."
         ]
       },
       {
         "title": "Fixed",
         "items": [
-          "Fixed reminder time defaulting to current device time instead of 9 AM."
-        ]
-      },
-      {
-        "title": "Fixed",
-        "items": [
+          "Fixed reminder time defaulting to current device time instead of 9 AM.",
           "Fixed Android reminder Complete action to open the linked transaction instead of its budget.",
           "Removed hard-to-read date range text from the budget detail Remaining card in light theme."
-        ]
-      },
-      {
-        "title": "Improved",
-        "items": [
-          "Improved tab switching speed by skipping redundant data reloads."
         ]
       }
     ]
