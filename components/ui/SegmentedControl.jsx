@@ -110,7 +110,7 @@ export function SegmentedControl({ options, value, onChange, style, dense = fals
                 color={active ? colors.primary : colors.textMuted}
               />
             ) : null}
-            <Text variant="label" tone={active ? 'primary' : 'muted'}>
+            <Text variant={dense ? "caption" : "label"} tone={active ? 'primary' : 'muted'} style={{ textAlign: 'center' }}>
               {option.label}
             </Text>
           </Pressable>
