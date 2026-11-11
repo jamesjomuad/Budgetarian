@@ -1,7 +1,7 @@
 import { Skeleton } from 'boneyard-js/native';
 
 import { useTheme } from '../ui/ThemeProvider';
-import { useSkeletonBones } from './useSkeletonBones';
+import { useSkeleton } from './useSkeleton';
 
 /**
  * Theme-aware skeleton wrapper for Budgetarian.
@@ -25,7 +25,7 @@ export function BudgetarianSkeleton({
 }) {
   const { scheme, colors } = useTheme();
   const isDark = scheme === 'dark';
-  const bones = useSkeletonBones(name);
+  const bones = useSkeleton(name);
 
   return (
     <Skeleton

@@ -9,12 +9,12 @@ import { bones as staticBones } from './bones';
  * @returns {object} Responsive bone definition for the Skeleton component
  *
  * @example
- * const bones = useSkeletonBones('dashboard');
+ * const bones = useSkeleton('dashboard');
  * <BudgetarianSkeleton name="dashboard" loading={isLoading} initialBones={bones}>
  *   <RealContent />
  * </BudgetarianSkeleton>
  */
-export function useSkeletonBones(name) {
+export function useSkeleton(name) {
   const { width: screenWidth } = useWindowDimensions();
   const baseWidth = 390; // Reference width from bone definitions
   const scale = screenWidth / baseWidth;
