@@ -517,9 +517,12 @@ export default function BudgetDetailScreen() {
 
   if (!isCurrentBudget) {
     return (
-      <View style={[styles.fill, { backgroundColor: colors.background }]}>
+      <ScrollView style={styles.fill} contentContainerStyle={{ backgroundColor: colors.background }}>
         <Stack.Screen options={{ title: 'Budget…' }} />
-        <BudgetarianSkeleton name="budget-detail-loading" loading={true}>
+        <BudgetarianSkeleton 
+          name="budget-detail-loading" 
+          loading={true}
+        >
           <View style={{ gap: spacing.lg }}>
             <Card style={{ borderRadius: 25, padding: spacing.lg }}>
               <View style={{ height: 16, width: 100, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
@@ -537,11 +540,12 @@ export default function BudgetDetailScreen() {
               <View style={{ padding: spacing.lg, gap: spacing.md }}>
                 <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
                 <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
+                <View style={{ height: 60, backgroundColor: colors.surfaceMuted, borderRadius: 8 }} />
               </View>
             </Card>
           </View>
         </BudgetarianSkeleton>
-      </View>
+      </ScrollView>
     );
   }
 
