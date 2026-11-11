@@ -4,6 +4,13 @@ All notable user-facing changes to Budgetarian are documented here.
 
 ## [Unreleased]
 
+# v1.2.1 — 2026-11-11
+
+### Improved
+- Improved skeleton loaders to match actual screen content and scale to device size.
+- Moved Reports filter bar to the top for better visibility and easier access.
+- Made Reports filter labels more compact with two-line text.
+
 # v1.2.0 — 2026-11-10
 
 ### Added
