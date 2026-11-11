@@ -83,7 +83,7 @@ export const bones = {
     name: 'budgets-list',
     viewportWidth: 390,
     width: 390,
-    height: 500,
+    height: 580,
     bones: [
       // Section header
       [5, 10, 40, 14, 4],
@@ -93,10 +93,10 @@ export const bones = {
       [5, 124, 90, 72, 16],
       // Budget card 3
       [5, 208, 90, 72, 16],
-      // Section header 2
-      [5, 300, 40, 14, 4],
       // Budget card 4
-      [5, 330, 90, 72, 16],
+      [5, 292, 90, 72, 16],
+      // Budget card 5
+      [5, 376, 90, 72, 16],
     ],
   },
 

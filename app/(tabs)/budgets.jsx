@@ -58,7 +58,6 @@ export default function BudgetsScreen() {
   const budgets = useBudgetsStore((state) => state.budgets);
   const pinnedIds = useBudgetsStore((state) => state.pinnedIds);
   const isLoading = useBudgetsStore((state) => state.isLoading);
-  const lastLoadedAt = useBudgetsStore((state) => state.lastLoadedAt);
   const load = useBudgetsStore((state) => state.load);
   const togglePinned = useBudgetsStore((state) => state.togglePinned);
   const moveToFolder = useBudgetsStore((state) => state.moveToFolder);
@@ -851,7 +850,7 @@ export default function BudgetsScreen() {
                   ) : null}
                 </>
               ) : (
-                <BudgetarianSkeleton name="budgets-list" loading={isLoading && !lastLoadedAt}>
+                <BudgetarianSkeleton name="budgets-list" loading={isLoading && budgets.length === 0 && folders.length === 0}>
                   {/* Any touch inside the list region dismisses a stray open
                       swipe row (taps on the row itself are handled by its own
                       close overlay) — same pattern as the budget detail. */}
