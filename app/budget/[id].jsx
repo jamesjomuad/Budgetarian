@@ -324,6 +324,7 @@ export default function BudgetDetailScreen() {
   const storeBudgetId = useBudgetDetailStore((state) => state.budgetId);
   const error = useBudgetDetailStore((state) => state.error);
   const loadError = useBudgetDetailStore((state) => state.loadError);
+  const isLoading = useBudgetDetailStore((state) => state.isLoading);
   const load = useBudgetDetailStore((state) => state.load);
   const setActiveTag = useBudgetDetailStore((state) => state.setActiveTag);
   const removeTransaction = useBudgetDetailStore((state) => state.removeTransaction);
@@ -519,7 +520,7 @@ export default function BudgetDetailScreen() {
     return (
       <View style={[styles.fill, { backgroundColor: colors.background }]}>
         <Stack.Screen options={{ title: 'Budget…' }} />
-        <BudgetarianSkeleton name="budget-detail-loading" loading>
+        <BudgetarianSkeleton name="budget-detail-loading" loading={isLoading}>
           <View style={{ gap: spacing.lg }}>
             <Card style={{ borderRadius: 25, padding: spacing.lg }}>
               <View style={{ height: 16, width: 100, backgroundColor: colors.surfaceMuted, borderRadius: 4 }} />
