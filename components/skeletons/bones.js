@@ -178,6 +178,21 @@ const bones = {
       [5, 244, 90, 70, 12],    // Format card 3
     ],
   },
+
+  // ── Generic 5-item list ───────────────────────────────────────────
+  'list-5-items': {
+    name: 'list-5-items',
+    viewportWidth: 390,
+    width: 390,
+    height: 550,
+    bones: [
+      [5, 20, 90, 56, 8],      // Item 1
+      [5, 84, 90, 56, 8],      // Item 2
+      [5, 148, 90, 56, 8],     // Item 3
+      [5, 212, 90, 56, 8],     // Item 4
+      [5, 276, 90, 56, 8],     // Item 5
+    ],
+  },
 };
 
 // Register all bones at module load
