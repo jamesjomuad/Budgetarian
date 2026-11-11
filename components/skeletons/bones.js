@@ -19,12 +19,14 @@ export const bones = {
     name: 'dashboard-summary',
     viewportWidth: 390,
     width: 390,
-    height: 140,
+    height: 170,
     bones: [
-      [0, 0, 30, 16, 4],       // "Remaining" label
-      [0, 24, 55, 32, 4],      // Big currency amount
-      [0, 64, 50, 14, 4],      // "Across N active budgets" caption
-      [0, 90, 100, 6, 3],      // Progress bar track
+      [0, 10, 30, 16, 4],       // "Remaining" label
+      [0, 34, 55, 32, 4],       // Big currency amount
+      [0, 74, 50, 14, 4],       // "Across N active budgets" caption
+      [0, 104, 42, 28, 4],      // Income stat
+      [52, 104, 42, 28, 4],     // Expenses stat
+      [0, 146, 90, 12, 4],      // Footnote caption
     ],
   },
 
@@ -32,10 +34,13 @@ export const bones = {
     name: 'dashboard-attention',
     viewportWidth: 390,
     width: 390,
-    height: 80,
+    height: 260,
     bones: [
-      [5, 20, 60, 16, 4],
-      [5, 44, 40, 14, 4],
+      [5, 10, 50, 16, 4],       // Section header "Needs Attention"
+      [5, 46, 90, 50, 8],       // Attention row 1 (dot + name + amount)
+      [5, 102, 90, 50, 8],      // Attention row 2
+      [5, 158, 90, 50, 8],      // Attention row 3
+      [5, 216, 90, 36, 8],      // Show all row
     ],
   },
 
@@ -43,11 +48,17 @@ export const bones = {
     name: 'dashboard-upcoming',
     viewportWidth: 390,
     width: 390,
-    height: 180,
+    height: 460,
     bones: [
-      [5, 20, 90, 16, 4],
-      [5, 50, 90, 50, 12],
-      [5, 110, 90, 50, 12],
+      [5, 10, 40, 16, 4],       // Section header "Upcoming"
+      [5, 46, 90, 20, 8],       // Group head "Payments due"
+      [5, 74, 90, 50, 8],       // Payment row 1
+      [5, 132, 90, 50, 8],      // Payment row 2
+      [5, 190, 90, 50, 8],      // Payment row 3
+      [5, 252, 90, 20, 8],      // Group head "Reminders"
+      [5, 280, 90, 50, 8],      // Reminder row 1
+      [5, 338, 90, 50, 8],      // Reminder row 2
+      [5, 396, 90, 50, 8],      // Reminder row 3
     ],
   },
 
@@ -55,12 +66,15 @@ export const bones = {
     name: 'dashboard-recent',
     viewportWidth: 390,
     width: 390,
-    height: 240,
+    height: 390,
     bones: [
-      [5, 20, 90, 16, 4],
-      [5, 50, 90, 50, 12],
-      [5, 110, 90, 50, 12],
-      [5, 170, 90, 50, 12],
+      [5, 10, 55, 16, 4],       // Section header "Recent Transactions"
+      [5, 40, 90, 50, 8],       // Transaction row 1
+      [5, 98, 90, 50, 8],       // Transaction row 2
+      [5, 156, 90, 50, 8],      // Transaction row 3
+      [5, 214, 90, 50, 8],      // Transaction row 4
+      [5, 272, 90, 50, 8],      // Transaction row 5
+      [5, 330, 90, 50, 8],      // Transaction row 6
     ],
   },
 
