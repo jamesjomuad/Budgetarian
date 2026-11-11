@@ -1,13 +1,12 @@
 import { Skeleton } from 'boneyard-js/native';
 
 import { useTheme } from '../ui/ThemeProvider';
-
-// Import bone definitions to register them with Boneyard.
-import './bones';
+import { useSkeletonBones } from './useSkeletonBones';
 
 /**
  * Theme-aware skeleton wrapper for Budgetarian.
  * Wraps Boneyard's Skeleton and passes theme-appropriate colors.
+ * Automatically scales bones based on device dimensions.
  *
  * Usage:
  * <BudgetarianSkeleton name="dashboard" loading={isLoading}>
@@ -26,6 +25,7 @@ export function BudgetarianSkeleton({
 }) {
   const { scheme, colors } = useTheme();
   const isDark = scheme === 'dark';
+  const bones = useSkeletonBones(name);
 
   return (
     <Skeleton
@@ -39,6 +39,7 @@ export function BudgetarianSkeleton({
       stagger={stagger}
       fallback={fallback}
       style={style}
+      initialBones={bones}
     >
       {children}
     </Skeleton>

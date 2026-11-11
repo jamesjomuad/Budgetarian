@@ -13,7 +13,7 @@ import { registerBones } from 'boneyard-js/native';
  * These were manually tuned to approximate each screen's layout.
  */
 
-const bones = {
+export const bones = {
   // ── Home / Dashboard ───────────────────────────────────────────────
   'dashboard-summary': {
     name: 'dashboard-summary',
