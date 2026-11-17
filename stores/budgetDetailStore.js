@@ -251,13 +251,18 @@ export const useBudgetDetailStore = create((set, get) => {
         }
       }
 
-      // Reload both source and destination budgets if they differ, plus every budget card.
-      const reloads = [get().load(get().budgetId)];
-      if (destinationBudgetId !== get().budgetId) {
-        reloads.push(get().load(destinationBudgetId));
+      // Reload the source budget being viewed and every budget card.
+      // The destination budget reloads itself when the user navigates to it.
+      const currentBudgetId = get().budgetId;
+      if (currentBudgetId) {
+        await Promise.all([
+          get().load(currentBudgetId),
+          useBudgetsStore.getState().load(),
+        ]);
+      } else {
+        // No budget is currently open in the detail store; just refresh the list.
+        await useBudgetsStore.getState().load();
       }
-      reloads.push(useBudgetsStore.getState().load());
-      await Promise.all(reloads);
 
       useDashboardStore.getState().invalidate();
       useCalendarStore.getState().invalidate();
