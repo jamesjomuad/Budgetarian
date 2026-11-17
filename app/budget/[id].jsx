@@ -15,6 +15,7 @@ import { BudgetImportSheet } from '../../components/budgets/BudgetImportSheet';
 import { FolderPickerSheet } from '../../components/budgets/FolderPickerSheet';
 import { BudgetarianSkeleton } from '../../components/skeletons/BudgetarianSkeleton';
 import { TagSpendRow } from '../../components/tags/TagSpendRow';
+import { CloneTransactionSheet } from '../../components/transactions/CloneTransactionSheet';
 import { MoveTransactionSheet } from '../../components/transactions/MoveTransactionSheet';
 import { TransactionRow } from '../../components/transactions/TransactionRow';
 import { Button } from '../../components/ui/Button';
@@ -329,6 +330,7 @@ export default function BudgetDetailScreen() {
   const removeTransaction = useBudgetDetailStore((state) => state.removeTransaction);
   const updateTransaction = useBudgetDetailStore((state) => state.updateTransaction);
   const moveTransaction = useBudgetDetailStore((state) => state.moveTransaction);
+  const cloneTransaction = useBudgetDetailStore((state) => state.cloneTransaction);
   const archiveMany = useBudgetsStore((state) => state.archiveMany);
   const budgets = useBudgetsStore((state) => state.budgets);
   const loadBudgets = useBudgetsStore((state) => state.load);
@@ -355,6 +357,8 @@ export default function BudgetDetailScreen() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [movingTransaction, setMovingTransaction] = useState(null);
   const [moveBusy, setMoveBusy] = useState(false);
+  const [cloningTransaction, setCloningTransaction] = useState(null);
+  const [cloneBusy, setCloneBusy] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -436,8 +440,27 @@ export default function BudgetDetailScreen() {
     [budgets, moveBusy, moveTransaction, movingTransaction],
   );
 
+  const handleCloneTransaction = useCallback(
+    async (destinationBudgetId) => {
+      if (!cloningTransaction || cloneBusy) return;
+      const destination = budgets.find((entry) => entry.id === destinationBudgetId);
+      setCloneBusy(true);
+      try {
+        await cloneTransaction(cloningTransaction, destinationBudgetId);
+        setCloningTransaction(null);
+        showToast(`Cloned to ${destination?.name ?? 'the selected budget'}`, 'success');
+      } catch (cloneError) {
+        showToast(cloneError?.message ?? 'Could not clone the transaction.', 'error');
+      } finally {
+        setCloneBusy(false);
+      }
+    },
+    [budgets, cloneBusy, cloneTransaction, cloningTransaction],
+  );
+
   // Swipe actions per row: Delete asks for confirmation, Move opens the
-  // destination picker, and Paid/Unpaid is only present on statused transactions.
+  // destination picker, Clone opens the clone destination picker, and
+  // Paid/Unpaid is only present on statused transactions.
   const buildTransactionActions = useCallback(
     (transaction) => {
       const actions = [
@@ -454,6 +477,13 @@ export default function BudgetDetailScreen() {
           icon: 'wallet',
           accessibilityLabel: `Move ${transaction.description || 'this transaction'} to another budget`,
           onPress: () => setMovingTransaction(transaction),
+        },
+        {
+          key: 'clone',
+          label: 'Clone',
+          icon: 'copy',
+          accessibilityLabel: `Clone ${transaction.description || 'this transaction'} to another budget`,
+          onPress: () => setCloningTransaction(transaction),
         },
       ];
       const payment = effectivePaymentStatus(transaction);
@@ -898,6 +928,19 @@ export default function BudgetDetailScreen() {
           busy={moveBusy}
           onConfirm={handleMoveTransaction}
           onClose={() => setMovingTransaction(null)}
+        />
+      ) : null}
+
+      {cloningTransaction ? (
+        <CloneTransactionSheet
+          transaction={cloningTransaction}
+          currentBudget={budget}
+          budgets={budgets}
+          folders={folders}
+          currency={currency}
+          busy={cloneBusy}
+          onConfirm={handleCloneTransaction}
+          onClose={() => setCloningTransaction(null)}
         />
       ) : null}
 

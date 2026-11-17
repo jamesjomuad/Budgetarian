@@ -381,6 +381,81 @@ export async function moveTransactionToBudget(id, budgetId) {
   return moveTransactionWithStore(storage, id, budgetId);
 }
 
+/**
+ * Clone one transaction into a destination budget (which may be the same
+ * budget). Copies the parent row and every breakdown item with fresh ids;
+ * returns the new row and the source attachment paths so the store can
+ * duplicate receipt files afterwards. Reminders are never copied — they
+ * have their own lifecycle and notification ids.
+ */
+export async function cloneTransaction(sourceId, destinationBudgetId) {
+  const source = await storage.getTransaction(sourceId);
+  if (!source) throw new Error('That transaction no longer exists.');
+
+  const destination = await storage.getBudget(destinationBudgetId);
+  if (!destination || destination.deleted_at != null) {
+    throw new Error('The destination budget is no longer available.');
+  }
+
+  const subTransactions = await storage.listSubTransactionsByParent(sourceId);
+  const attachments = await storage.listAttachmentsByTransaction(sourceId);
+
+  const newId = createId('tx');
+  const timestamp = nowIso();
+
+  await storage.beginTransaction();
+  try {
+    await storage.insertTransaction({
+      id: newId,
+      budget_id: destinationBudgetId,
+      type: source.type,
+      amount: source.amount,
+      tag_id: source.tag_id,
+      account_id: source.account_id,
+      to_account_id: source.to_account_id,
+      description: source.description,
+      transaction_date: source.transaction_date,
+      payment_status: source.payment_status,
+      has_breakdown: source.has_breakdown,
+      payment_due_date: source.payment_due_date,
+      time: source.time,
+      notes: source.notes,
+      created_at: timestamp,
+      updated_at: timestamp,
+    });
+
+    for (const sub of subTransactions) {
+      await storage.insertSubTransaction({
+        id: createId('subtx'),
+        transaction_id: newId,
+        description: sub.description,
+        amount: sub.amount,
+        position: sub.position,
+        purchase_date: sub.purchase_date,
+        purchase_time: sub.purchase_time,
+        notes: sub.notes,
+        created_at: timestamp,
+        updated_at: timestamp,
+      });
+    }
+
+    await storage.commitTransaction();
+  } catch (error) {
+    try {
+      await storage.rollbackTransaction();
+    } catch {
+      // The engine already discarded the group; the original error is what
+      // callers need to see.
+    }
+    throw error;
+  }
+
+  return {
+    transaction: await storage.getTransaction(newId),
+    sourceAttachmentPaths: attachments.map((att) => att.path),
+  };
+}
+
 export async function deleteTransaction(id) {
   // SQLite cascades through the foreign key; the memory adapter mirrors the
   // cascade so no engine ever leaves orphan items behind.

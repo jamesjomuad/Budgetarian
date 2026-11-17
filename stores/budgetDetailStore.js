@@ -10,10 +10,11 @@ import {
   getSubTransactionsForBudget,
   getTransactionsForBudget,
   moveTransactionToBudget,
+  cloneTransaction,
   updateTransaction,
 } from '../storage/repositories/transactionRepository';
 import { applyReminder } from '../services/reminderService';
-import { deleteReceiptFile } from '../services/receiptFiles';
+import { deleteReceiptFile, readReceiptBase64, writeReceiptBase64 } from '../services/receiptFiles';
 import { useBudgetsStore } from './budgetsStore';
 import { useDashboardStore } from './dashboardStore';
 import { useCalendarStore } from './calendarStore';
@@ -217,6 +218,47 @@ export const useBudgetDetailStore = create((set, get) => {
         get().load(get().budgetId),
         useBudgetsStore.getState().load(),
       ]);
+      useDashboardStore.getState().invalidate();
+      useCalendarStore.getState().invalidate();
+      useReportsStore.getState().invalidate();
+      return transaction;
+    },
+
+    /**
+     * Clone a transaction into a destination budget. Copies the row and breakdown
+     * items via the repository, then duplicates receipt files one by one. A failed
+     * file copy loses that attachment but never the transaction — the same order
+     * addTransaction uses for shared receipts.
+     */
+    cloneTransaction: async (sourceTransaction, destinationBudgetId) => {
+      const { transaction, sourceAttachmentPaths } = await cloneTransaction(
+        sourceTransaction.id,
+        destinationBudgetId,
+      );
+
+      // Duplicate each receipt file and create a new attachment row pointing at it.
+      // A failed copy costs one attachment but never the transaction.
+      for (const sourcePath of sourceAttachmentPaths) {
+        try {
+          const base64 = await readReceiptBase64(sourcePath);
+          if (!base64) continue;
+          // Extract extension from the source path (receipts/name.ext)
+          const ext = sourcePath.includes('.') ? `.${sourcePath.split('.').pop()}` : '.jpg';
+          const newPath = await writeReceiptBase64(base64, ext);
+          await createAttachment({ transactionId: transaction.id, path: newPath });
+        } catch {
+          // A failed attachment copy is logged but does not fail the clone.
+        }
+      }
+
+      // Reload both source and destination budgets if they differ, plus every budget card.
+      const reloads = [get().load(get().budgetId)];
+      if (destinationBudgetId !== get().budgetId) {
+        reloads.push(get().load(destinationBudgetId));
+      }
+      reloads.push(useBudgetsStore.getState().load());
+      await Promise.all(reloads);
+
       useDashboardStore.getState().invalidate();
       useCalendarStore.getState().invalidate();
       useReportsStore.getState().invalidate();
