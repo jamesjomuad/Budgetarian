@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { getAttachments, createAttachment } from '../storage/repositories/attachmentRepository';
 import { getBudget } from '../storage/repositories/budgetRepository';
 import { getRemindersForBudget } from '../storage/repositories/reminderRepository';
-import { getTags } from '../storage/repositories/tagRepository';
 import {
   createTransaction,
   deleteTransaction,
@@ -16,9 +15,10 @@ import {
 import { applyReminder } from '../services/reminderService';
 import { deleteReceiptFile, readReceiptBase64, writeReceiptBase64 } from '../services/receiptFiles';
 import { useBudgetsStore } from './budgetsStore';
-import { useDashboardStore } from './dashboardStore';
 import { useCalendarStore } from './calendarStore';
+import { useDashboardStore } from './dashboardStore';
 import { useReportsStore } from './reportsStore';
+import { useTagsStore } from './tagsStore';
 import {
   collectUsedTagIds,
   computeTagExpenseBreakdown,
@@ -66,9 +66,12 @@ export const useBudgetDetailStore = create((set, get) => {
       set({ budgetId, isLoading: true, error: null, loadError: null, activeTagId });
 
       try {
-        const [budget, tags, entries, reminders, breakdowns] = await Promise.all([
+        // Tags come from the shared tags store (cached with 2s TTL) instead of
+        // a direct repository read, so opening a budget never re-queries the
+        // tag library when it was already loaded moments ago.
+        const [budget, _tagsResult, entries, reminders, breakdowns] = await Promise.all([
           getBudget(budgetId),
-          getTags(),
+          useTagsStore.getState().load(),
           getTransactionsForBudget(budgetId),
           // Archived rows included: the budget's own detail view stays
           // archive-agnostic, exactly like its row and its transactions. Scoped
@@ -76,6 +79,7 @@ export const useBudgetDetailStore = create((set, get) => {
           getRemindersForBudget(budgetId, { includeArchived: true }),
           getSubTransactionsForBudget(budgetId),
         ]);
+        const tags = useTagsStore.getState().tags;
 
         if (id !== requestId) return;
 
@@ -193,6 +197,7 @@ export const useBudgetDetailStore = create((set, get) => {
       useDashboardStore.getState().invalidate();
       useCalendarStore.getState().invalidate();
       useReportsStore.getState().invalidate();
+      useTagsStore.getState().invalidate();
       return { transaction, reminder, attachmentError };
     },
 
@@ -206,6 +211,7 @@ export const useBudgetDetailStore = create((set, get) => {
       useDashboardStore.getState().invalidate();
       useCalendarStore.getState().invalidate();
       useReportsStore.getState().invalidate();
+      useTagsStore.getState().invalidate();
       return { transaction, reminder };
     },
 
@@ -221,6 +227,7 @@ export const useBudgetDetailStore = create((set, get) => {
       useDashboardStore.getState().invalidate();
       useCalendarStore.getState().invalidate();
       useReportsStore.getState().invalidate();
+      useTagsStore.getState().invalidate();
       return transaction;
     },
 
@@ -267,6 +274,7 @@ export const useBudgetDetailStore = create((set, get) => {
       useDashboardStore.getState().invalidate();
       useCalendarStore.getState().invalidate();
       useReportsStore.getState().invalidate();
+      useTagsStore.getState().invalidate();
       return transaction;
     },
 
@@ -283,6 +291,7 @@ export const useBudgetDetailStore = create((set, get) => {
       useDashboardStore.getState().invalidate();
       useCalendarStore.getState().invalidate();
       useReportsStore.getState().invalidate();
+      useTagsStore.getState().invalidate();
     },
 
     refresh: async () => {

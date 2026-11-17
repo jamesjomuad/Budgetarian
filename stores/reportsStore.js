@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 
-import { getTags } from '../storage/repositories/tagRepository';
 import {
   getBreakdownItemsInRange,
   getSubTransactionsForParents,
@@ -17,6 +16,7 @@ import {
   trendForFilter,
   trendRange,
 } from '../utils/reports';
+import { useTagsStore } from './tagsStore';
 
 function computeTrend(view, range, rows) {
   const buckets = buildTrendBuckets(view, range, rows);
@@ -79,11 +79,15 @@ export const useReportsStore = create((set, get) => ({
 
     try {
       const period = periodRange(filter, get().custom);
-      const [rows, tags, events] = await Promise.all([
+      // Tags come from the shared tags store (cached with 2s TTL) instead of
+      // a direct repository read, so changing the report filter never re-queries
+      // the tag library when it was already loaded moments ago.
+      const [rows, _tagsResult, events] = await Promise.all([
         getTransactionsInRange(period.start, period.end),
-        getTags(),
+        useTagsStore.getState().load(),
         getBreakdownItemsInRange(period.start, period.end),
       ]);
+      const tags = useTagsStore.getState().tags;
 
       // Date-grouped views read the purchase perspective: a breakdown parent
       // is replaced by its own items in their own purchase periods, so the

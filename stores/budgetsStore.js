@@ -20,7 +20,9 @@ import {
 } from '../storage/repositories/settingsRepository';
 import { deleteRemindersForBudget } from '../storage/repositories/reminderRepository';
 import { cancelScheduledRemindersForBudget } from '../services/reminderService';
+import { useCalendarStore } from './calendarStore';
 import { useDashboardStore } from './dashboardStore';
+import { useReportsStore } from './reportsStore';
 
 /**
  * Home screen state. Each entry already carries `spent`, `income` and
@@ -86,6 +88,8 @@ export const useBudgetsStore = create((set, get) => ({
     await archiveBudgets(ids);
     await get().load();
     useDashboardStore.getState().invalidate();
+    useCalendarStore.getState().invalidate();
+    useReportsStore.getState().invalidate();
   },
 
   /**
@@ -96,6 +100,8 @@ export const useBudgetsStore = create((set, get) => ({
     const budget = await restoreBudget(id);
     await get().load();
     useDashboardStore.getState().invalidate();
+    useCalendarStore.getState().invalidate();
+    useReportsStore.getState().invalidate();
     return budget;
   },
 
@@ -108,6 +114,8 @@ export const useBudgetsStore = create((set, get) => ({
     await restoreBudgets(ids);
     await get().load();
     useDashboardStore.getState().invalidate();
+    useCalendarStore.getState().invalidate();
+    useReportsStore.getState().invalidate();
   },
 
   fetchBudget: (id) => getBudget(id),
@@ -116,6 +124,8 @@ export const useBudgetsStore = create((set, get) => ({
     const budget = await createBudget(input);
     await get().load();
     useDashboardStore.getState().invalidate();
+    useCalendarStore.getState().invalidate();
+    useReportsStore.getState().invalidate();
     return budget;
   },
 
@@ -123,6 +133,8 @@ export const useBudgetsStore = create((set, get) => ({
     const budget = await updateBudget(id, input);
     await get().load();
     useDashboardStore.getState().invalidate();
+    useCalendarStore.getState().invalidate();
+    useReportsStore.getState().invalidate();
     return budget;
   },
 
@@ -137,6 +149,8 @@ export const useBudgetsStore = create((set, get) => ({
     if (pinnedIds.length !== get().pinnedIds.length) await setPinnedBudgetIds(pinnedIds);
     await get().load();
     useDashboardStore.getState().invalidate();
+    useCalendarStore.getState().invalidate();
+    useReportsStore.getState().invalidate();
   },
 
   /**
@@ -165,6 +179,8 @@ export const useBudgetsStore = create((set, get) => ({
     if (pinnedIds.length !== get().pinnedIds.length) await setPinnedBudgetIds(pinnedIds);
     await get().load();
     useDashboardStore.getState().invalidate();
+    useCalendarStore.getState().invalidate();
+    useReportsStore.getState().invalidate();
     return { deleted, failed };
   },
 
