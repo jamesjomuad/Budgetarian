@@ -15,6 +15,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { FAB_SIZE, Fab } from '../../components/ui/Fab';
 import { Icon } from '../../components/ui/Icon';
 import { Screen, SectionHeader } from '../../components/ui/Screen';
+import { SwipeActionRow, closeAllSwipeActions } from '../../components/ui/SwipeActionRow';
 import { Text } from '../../components/ui/Text';
 import { useTheme } from '../../components/ui/ThemeProvider';
 import { resolveFolderPalette } from '../../utils/colors';
@@ -71,6 +72,12 @@ export default function FolderDetailScreen() {
   // budget, so all rows are eligible by default.
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // The budget whose details are shown while a selection is active. The
+  // checkbox stays the only selection control; tapping the row opens this.
+  const [detailBudget, setDetailBudget] = useState(null);
+  // A single row's Move action is independent of the checkbox selection.
+  const [moveBudget, setMoveBudget] = useState(null);
+
   // The ids whose archive can still be undone. Undo reads and clears this in
   // the same tick, so a repeated tap is a no-op rather than a second restore.
   const undoRef = useRef(null);
@@ -78,6 +85,66 @@ export default function FolderDetailScreen() {
   // Archiving is a write, so a second confirm is swallowed until the first
   // settles — the dialog can't double-submit.
   const archivingRef = useRef(false);
+
+  // Swipe-to-delete on a budget row follows the same contract as the Budgets
+  // tab: archiveMany flips only deleted_at, so the budget moves to Archive
+  // with all its data intact and can be restored later.
+  const swipingDeleteRef = useRef(false);
+
+  const confirmSwipeDelete = useCallback(
+    (budget) => {
+      Alert.alert(
+        `Delete ${budget.name}?`,
+        'This budget will be removed from your active lists and moved to Archive. Its financial data will be preserved, and you can restore it later from Archive.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'default',
+            onPress: async () => {
+              if (swipingDeleteRef.current) return;
+              swipingDeleteRef.current = true;
+              try {
+                await archiveMany([budget.id]);
+                showToast('1 budget archived', 'success');
+              } catch (error) {
+                showToast(
+                  error?.message ?? 'Could not archive this budget.',
+                  'error',
+                );
+              } finally {
+                swipingDeleteRef.current = false;
+              }
+            },
+          },
+        ],
+      );
+    },
+    [archiveMany],
+  );
+
+  // A budget row's swipe actions. Move reuses the same destination picker and
+  // confirmation flow as the details sheet; Delete keeps its destructive tone.
+  const budgetActions = useCallback(
+    (budget) => [
+      {
+        key: 'delete',
+        label: 'Delete',
+        icon: 'trash',
+        tone: 'destructive',
+        accessibilityLabel: `Delete ${budget.name}`,
+        onPress: () => confirmSwipeDelete(budget),
+      },
+      {
+        key: 'move',
+        label: 'Move',
+        icon: 'folder',
+        accessibilityLabel: `Move ${budget.name} to another folder`,
+        onPress: () => setMoveBudget(budget),
+      },
+    ],
+    [confirmSwipeDelete, setMoveBudget],
+  );
 
   /** Undo lives here, not in the toast: after a successful archive, restore
    *  the same ids to their original folders (or the root list). */
@@ -203,11 +270,6 @@ export default function FolderDetailScreen() {
     [],
   );
 
-  // The budget whose details are shown while a selection is active. The
-  // checkbox stays the only selection control; tapping the row opens this.
-  const [detailBudget, setDetailBudget] = useState(null);
-  // A single row's Move action is independent of the checkbox selection.
-  const [moveBudget, setMoveBudget] = useState(null);
   const openBudgetDetail = useCallback(
     (budget) => setDetailBudget(budget),
     [setDetailBudget],
@@ -450,36 +512,53 @@ export default function FolderDetailScreen() {
                       </Pressable>
                     }
                   />
-                  <Card padded={false}>
-                    {sel.masterRow}
-                    <DraggableRows
-                      items={dragItems}
-                      disabled={sel.selectionMode}
-                      scroll={dragScroll}
-                      onLiftChange={setLiftedKey}
-                      onReorder={handleReorder}
-                      renderItem={(item, index, total, lifted, reorder) => (
-                        <BudgetCard
-                          key={item.key}
-                          budget={item.budget}
-                          currency={currency}
-                          pinned={pinnedIds.includes(item.budget.id)}
-                          onTogglePin={togglePinned}
-                          selectable={sel.selectionMode}
-                          selected={sel.isSelected(item.budget.id)}
-                          onToggleSelect={sel.toggleItem}
-                          onPress={
-                            lifted
-                              ? undefined
-                              : sel.selectionMode
-                                ? openBudgetDetail
-                                : openBudget
-                          }
-                          isLast={index === total - 1}
-                          reorder={reorder}
-                        />
-                      )}
-                    />
+                  <Card
+                    padded={false}
+                    style={{ overflow: liftedKey ? 'visible' : 'hidden' }}
+                  >
+                    <View onTouchStart={closeAllSwipeActions}>
+                      {sel.masterRow}
+                      <DraggableRows
+                        items={dragItems}
+                        disabled={sel.selectionMode}
+                        scroll={dragScroll}
+                        onLiftChange={setLiftedKey}
+                        onReorder={handleReorder}
+                        renderItem={(item, index, total, lifted, reorder) => {
+                          const budgetCard = (
+                            <BudgetCard
+                              budget={item.budget}
+                              currency={currency}
+                              pinned={pinnedIds.includes(item.budget.id)}
+                              onTogglePin={togglePinned}
+                              selectable={sel.selectionMode}
+                              selected={sel.isSelected(item.budget.id)}
+                              onToggleSelect={sel.toggleItem}
+                              onPress={
+                                lifted
+                                  ? undefined
+                                  : sel.selectionMode
+                                    ? openBudgetDetail
+                                    : openBudget
+                              }
+                              isLast={index === total - 1}
+                              reorder={reorder}
+                            />
+                          );
+
+                          return (
+                            <SwipeActionRow
+                              key={item.key}
+                              rowId={`folder-row-${item.budget.id}`}
+                              actions={budgetActions(item.budget)}
+                              disabled={lifted || sel.selectionMode}
+                            >
+                              {budgetCard}
+                            </SwipeActionRow>
+                          );
+                        }}
+                      />
+                    </View>
                   </Card>
                 </>
               )}
