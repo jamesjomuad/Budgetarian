@@ -4,6 +4,18 @@ All notable user-facing changes to Budgetarian are documented here.
 
 ## [Unreleased]
 
+# v1.3.0 — 2026-11-18
+
+### Added
+- Added swipe actions to budget cards inside folders for quick delete and move.
+
+### Improved
+- Improved transaction cloning to support choosing a different destination budget.
+- Improved navigation speed by reducing redundant data reads across screens.
+
+### Fixed
+- Fixed UI freeze after cloning a transaction to a different budget.
+
 # v1.2.1 — 2026-11-11
 
 ### Improved
