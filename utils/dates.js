@@ -311,3 +311,33 @@ function fromParts(year, month, day) {
   }
   return toIsoDate(date);
 }
+
+/**
+ * Adjust a transaction date to a different month/year while preserving the day.
+ * If the original day doesn't exist in the destination month (e.g., Jan 31 → Feb),
+ * clamp it to the last valid day of that month. Uses local date handling to avoid
+ * UTC timezone shifts.
+ *
+ * @param {string} sourceDate - ISO date string (YYYY-MM-DD) from the original transaction
+ * @param {string} destinationDate - ISO date string (YYYY-MM-DD) from the destination budget
+ * @returns {string} Adjusted ISO date string with destination's month/year and source's day
+ */
+export function adjustDateToMonth(sourceDate, destinationDate) {
+  const source = parseIsoDate(sourceDate);
+  const dest = parseIsoDate(destinationDate);
+
+  const sourceDay = source.getDate();
+  const destYear = dest.getFullYear();
+  const destMonth = dest.getMonth(); // 0-indexed
+
+  // Try the source day in the destination month
+  const adjusted = new Date(destYear, destMonth, sourceDay);
+
+  // If the day overflowed (e.g., Jan 31 → Feb 31 becomes Mar 3), clamp to last day
+  if (adjusted.getMonth() !== destMonth) {
+    // Set to day 0 of the next month, which is the last day of the destination month
+    adjusted.setMonth(destMonth + 1, 0);
+  }
+
+  return toIsoDate(adjusted);
+}

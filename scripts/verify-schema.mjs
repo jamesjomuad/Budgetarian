@@ -14,6 +14,7 @@ import {
 } from '../utils/calculations.js';
 import {
   addDaysIso,
+  adjustDateToMonth,
   DATE_SHORTCUTS,
   daysInclusive,
   formatDateRange,
@@ -6097,6 +6098,243 @@ check(
   'the import preview now reports its format version and receipt bytes',
   validatedTransfer.formatVersion === 1 && validatedTransfer.counts.attachmentBytes === 8,
   JSON.stringify({ version: validatedTransfer.formatVersion, bytes: validatedTransfer.counts.attachmentBytes }),
+);
+
+// --- adjustDateToMonth tests -------------------------------------------
+check(
+  'adjustDateToMonth preserves day when destination month has that day',
+  adjustDateToMonth('2026-01-15', '2026-03-01') === '2026-03-15',
+  `expected 2026-03-15, got ${adjustDateToMonth('2026-01-15', '2026-03-01')}`,
+);
+
+check(
+  'adjustDateToMonth handles year change with day preservation',
+  adjustDateToMonth('2025-12-25', '2026-06-01') === '2026-06-25',
+  `expected 2026-06-25, got ${adjustDateToMonth('2025-12-25', '2026-06-01')}`,
+);
+
+check(
+  'adjustDateToMonth clamps Jan 31 to Feb 28 in non-leap year',
+  adjustDateToMonth('2026-01-31', '2026-02-01') === '2026-02-28',
+  `expected 2026-02-28, got ${adjustDateToMonth('2026-01-31', '2026-02-01')}`,
+);
+
+check(
+  'adjustDateToMonth clamps Jan 31 to Feb 29 in leap year',
+  adjustDateToMonth('2024-01-31', '2024-02-01') === '2024-02-29',
+  `expected 2024-02-29, got ${adjustDateToMonth('2024-01-31', '2024-02-01')}`,
+);
+
+check(
+  'adjustDateToMonth clamps Jan 31 to Feb 29 when destination is leap year Feb',
+  adjustDateToMonth('2026-01-31', '2028-02-15') === '2028-02-29',
+  `expected 2028-02-29, got ${adjustDateToMonth('2026-01-31', '2028-02-15')}`,
+);
+
+check(
+  'adjustDateToMonth preserves day 30 in months with 30 days',
+  adjustDateToMonth('2026-01-30', '2026-04-01') === '2026-04-30',
+  `expected 2026-04-30, got ${adjustDateToMonth('2026-01-30', '2026-04-01')}`,
+);
+
+check(
+  'adjustDateToMonth clamps day 31 to day 30 in April',
+  adjustDateToMonth('2026-01-31', '2026-04-15') === '2026-04-30',
+  `expected 2026-04-30, got ${adjustDateToMonth('2026-01-31', '2026-04-15')}`,
+);
+
+check(
+  'adjustDateToMonth handles same month (no change)',
+  adjustDateToMonth('2026-03-15', '2026-03-01') === '2026-03-15',
+  `expected 2026-03-15, got ${adjustDateToMonth('2026-03-15', '2026-03-01')}`,
+);
+
+check(
+  'adjustDateToMonth handles leap year boundary correctly',
+  adjustDateToMonth('2023-02-28', '2024-02-10') === '2024-02-28' &&
+    adjustDateToMonth('2024-02-29', '2025-02-10') === '2025-02-28',
+  `non-leap: ${adjustDateToMonth('2023-02-28', '2024-02-10')}, leap→non: ${adjustDateToMonth('2024-02-29', '2025-02-10')}`,
+);
+
+check(
+  'adjustDateToMonth preserves time field separately (time is not adjusted)',
+  adjustDateToMonth('2026-01-31', '2026-02-01') === '2026-02-28',
+  `date adjusted correctly: ${adjustDateToMonth('2026-01-31', '2026-02-01')}`,
+);
+
+// --- Clone transaction date adjustment integration test ----------------
+// Simulates the cloneTransaction logic: create a source transaction, then
+// clone it to a destination budget with a different month, verifying the
+// date is adjusted correctly.
+const cloneTestStore = createMemoryAdapter();
+
+// Create source budget (January 2026)
+await cloneTestStore.insertBudget({
+  id: 'clone_src_budget',
+  name: 'January Budget',
+  start_date: '2026-01-01',
+  end_date: '2026-01-31',
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+// Create destination budget (March 2026)
+await cloneTestStore.insertBudget({
+  id: 'clone_dst_budget',
+  name: 'March Budget',
+  start_date: '2026-03-01',
+  end_date: '2026-03-31',
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+await cloneTestStore.insertTag({
+  id: 'clone_tag',
+  name: 'Clone Tag',
+  emoji: '📋',
+  color: '#654321',
+  is_default: 0,
+  archived: 0,
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+// Create source transaction on Jan 15, 2026 at 14:30
+await cloneTestStore.insertTransaction({
+  id: 'clone_src_tx',
+  budget_id: 'clone_src_budget',
+  type: 'expense',
+  amount: 5000,
+  tag_id: 'clone_tag',
+  account_id: null,
+  to_account_id: null,
+  description: 'Original transaction',
+  transaction_date: '2026-01-15',
+  time: '14:30',
+  payment_status: 'pending',
+  has_breakdown: 0,
+  payment_due_date: '2026-01-20',
+  notes: 'Test notes',
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+// Simulate clone: read source, adjust date, insert into destination
+const sourceTx = await cloneTestStore.getTransaction('clone_src_tx');
+const destBudget = await cloneTestStore.getBudget('clone_dst_budget');
+const adjustedCloneDate = adjustDateToMonth(sourceTx.transaction_date, destBudget.start_date);
+const adjustedCloneDueDate = sourceTx.payment_due_date
+  ? adjustDateToMonth(sourceTx.payment_due_date, destBudget.start_date)
+  : sourceTx.payment_due_date;
+
+await cloneTestStore.insertTransaction({
+  id: 'clone_dst_tx',
+  budget_id: 'clone_dst_budget',
+  type: sourceTx.type,
+  amount: sourceTx.amount,
+  tag_id: sourceTx.tag_id,
+  account_id: sourceTx.account_id,
+  to_account_id: sourceTx.to_account_id,
+  description: sourceTx.description,
+  transaction_date: adjustedCloneDate,
+  time: sourceTx.time,
+  payment_status: sourceTx.payment_status,
+  has_breakdown: sourceTx.has_breakdown,
+  payment_due_date: adjustedCloneDueDate,
+  notes: sourceTx.notes,
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+const clonedTx = await cloneTestStore.getTransaction('clone_dst_tx');
+
+check(
+  'cloned transaction date is adjusted to destination budget month',
+  clonedTx.transaction_date === '2026-03-15',
+  `expected 2026-03-15, got ${clonedTx.transaction_date}`,
+);
+
+check(
+  'cloned transaction preserves time from source',
+  clonedTx.time === '14:30',
+  `expected 14:30, got ${clonedTx.time}`,
+);
+
+check(
+  'cloned transaction payment_due_date is adjusted to destination budget month',
+  clonedTx.payment_due_date === '2026-03-20',
+  `expected 2026-03-20, got ${clonedTx.payment_due_date}`,
+);
+
+check(
+  'cloned transaction preserves all other fields from source',
+  clonedTx.type === sourceTx.type &&
+    clonedTx.amount === sourceTx.amount &&
+    clonedTx.description === sourceTx.description &&
+    clonedTx.notes === sourceTx.notes &&
+    clonedTx.budget_id === 'clone_dst_budget',
+  `type: ${clonedTx.type}, amount: ${clonedTx.amount}, budget: ${clonedTx.budget_id}`,
+);
+
+// Test month-end clamping in clone scenario
+await cloneTestStore.insertTransaction({
+  id: 'clone_src_tx_jan31',
+  budget_id: 'clone_src_budget',
+  type: 'expense',
+  amount: 7500,
+  tag_id: 'clone_tag',
+  account_id: null,
+  to_account_id: null,
+  description: 'Jan 31 transaction',
+  transaction_date: '2026-01-31',
+  time: '10:00',
+  payment_status: 'pending',
+  has_breakdown: 0,
+  payment_due_date: null,
+  notes: null,
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+// Clone to February (non-leap year)
+await cloneTestStore.insertBudget({
+  id: 'clone_feb_budget',
+  name: 'February Budget',
+  start_date: '2026-02-01',
+  end_date: '2026-02-28',
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+const jan31Tx = await cloneTestStore.getTransaction('clone_src_tx_jan31');
+const febBudget = await cloneTestStore.getBudget('clone_feb_budget');
+const febCloneDate = adjustDateToMonth(jan31Tx.transaction_date, febBudget.start_date);
+
+await cloneTestStore.insertTransaction({
+  id: 'clone_feb_tx',
+  budget_id: 'clone_feb_budget',
+  type: jan31Tx.type,
+  amount: jan31Tx.amount,
+  tag_id: jan31Tx.tag_id,
+  account_id: jan31Tx.account_id,
+  to_account_id: jan31Tx.to_account_id,
+  description: jan31Tx.description,
+  transaction_date: febCloneDate,
+  time: jan31Tx.time,
+  payment_status: jan31Tx.payment_status,
+  has_breakdown: jan31Tx.has_breakdown,
+  payment_due_date: jan31Tx.payment_due_date,
+  notes: jan31Tx.notes,
+  created_at: STAMP,
+  updated_at: STAMP,
+});
+
+const febCloneTx = await cloneTestStore.getTransaction('clone_feb_tx');
+
+check(
+  'cloned Jan 31 transaction is clamped to Feb 28 in non-leap year',
+  febCloneTx.transaction_date === '2026-02-28',
+  `expected 2026-02-28, got ${febCloneTx.transaction_date}`,
 );
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

@@ -2,7 +2,7 @@ import { storage } from '../adapters/adapter';
 import { moveTransactionToBudget as moveTransactionWithStore } from './transactionMoveRepository';
 import { createId, nowIso } from '../../utils/id';
 import { defaultPaymentStatus, effectivePaymentStatus } from '../../utils/paymentStatus';
-import { nowTime } from '../../utils/dates';
+import { adjustDateToMonth, nowTime } from '../../utils/dates';
 import {
   breakdownValidationError,
   computeBreakdownTotal,
@@ -403,6 +403,13 @@ export async function cloneTransaction(sourceId, destinationBudgetId) {
   const newId = createId('tx');
   const timestamp = nowIso();
 
+  // Adjust the transaction date to the destination budget's month/year while
+  // preserving the day of month. Handles month-end clamping (e.g., Jan 31 → Feb 28).
+  const adjustedDate = adjustDateToMonth(source.transaction_date, destination.start_date);
+  const adjustedPaymentDueDate = source.payment_due_date
+    ? adjustDateToMonth(source.payment_due_date, destination.start_date)
+    : source.payment_due_date;
+
   await storage.beginTransaction();
   try {
     await storage.insertTransaction({
@@ -414,10 +421,10 @@ export async function cloneTransaction(sourceId, destinationBudgetId) {
       account_id: source.account_id,
       to_account_id: source.to_account_id,
       description: source.description,
-      transaction_date: source.transaction_date,
+      transaction_date: adjustedDate,
       payment_status: source.payment_status,
       has_breakdown: source.has_breakdown,
-      payment_due_date: source.payment_due_date,
+      payment_due_date: adjustedPaymentDueDate,
       time: source.time,
       notes: source.notes,
       created_at: timestamp,
@@ -425,13 +432,18 @@ export async function cloneTransaction(sourceId, destinationBudgetId) {
     });
 
     for (const sub of subTransactions) {
+      // Adjust breakdown item purchase dates to match the destination budget's month/year.
+      const adjustedPurchaseDate = sub.purchase_date
+        ? adjustDateToMonth(sub.purchase_date, destination.start_date)
+        : sub.purchase_date;
+
       await storage.insertSubTransaction({
         id: createId('subtx'),
         transaction_id: newId,
         description: sub.description,
         amount: sub.amount,
         position: sub.position,
-        purchase_date: sub.purchase_date,
+        purchase_date: adjustedPurchaseDate,
         purchase_time: sub.purchase_time,
         notes: sub.notes,
         created_at: timestamp,
